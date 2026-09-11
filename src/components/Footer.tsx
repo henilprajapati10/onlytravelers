@@ -7,7 +7,7 @@ export default function Footer() {
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid gap-10 sm:grid-cols-3">
           <div>
-            <Logo className="mb-3" />
+            <Logo className="mb-3" tone="light" />
             <p className="max-w-xs text-sm text-navy-200">
               Be travelers, not tourists. We help you go deeper into India —
               one honest, well-researched destination at a time.
@@ -30,6 +30,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/states" className="hover:text-coral-400">
+                  States &amp; UTs
+                </Link>
+              </li>
+              <li>
                 <Link href="/cart" className="hover:text-coral-400">
                   Your Trip Bag
                 </Link>
@@ -45,6 +50,11 @@ export default function Footer() {
               <li>
                 <Link href="/campaign" className="hover:text-coral-400">
                   Travelers, Not Tourists
+                </Link>
+              </li>
+              <li>
+                <Link href="/image-rights" className="hover:text-coral-400">
+                  Image rights register
                 </Link>
               </li>
             </ul>

@@ -1,63 +1,78 @@
 import Link from "next/link";
-import { destinations, categories } from "@/data/destinations";
+import { destinations, themes } from "@/data/destinations";
+import { states, zones, zoneBlurbs } from "@/data/states";
 import DestinationCard from "@/components/DestinationCard";
-import { categoryStyle } from "@/lib/categoryStyles";
+import { themeEmoji } from "@/lib/format";
 
-const featuredSlugs = [
-  "jaipur",
-  "kerala-backwaters",
-  "hampi",
-  "leh-ladakh",
-  "varanasi",
-  "andaman",
+const FEATURED = [
+  "taj-mahal-agra",
+  "alleppey-backwaters",
+  "hampi-unesco",
+  "pangong-tso",
+  "living-root-bridges-nongriat",
+  "white-rann-dhordo",
 ];
 
 export default function HomePage() {
-  const featured = featuredSlugs
-    .map((slug) => destinations.find((d) => d.slug === slug))
-    .filter(Boolean) as typeof destinations;
+  const featured = FEATURED.map((slug) => destinations.find((d) => d.slug === slug)).filter(
+    (d): d is (typeof destinations)[number] => Boolean(d)
+  );
 
   return (
     <div>
-      <section className="bg-topo relative overflow-hidden border-b border-navy-100 bg-sand-50">
+      <section className="bg-topo border-b border-navy-100">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
           <p className="mb-4 inline-block rounded-full bg-navy-800 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-white">
             Be travelers, not tourists
           </p>
-          <h1 className="font-display max-w-2xl text-4xl font-bold leading-tight text-navy-800 sm:text-5xl">
-            India, one honest destination at a time.
+          <h1 className="font-display max-w-3xl text-4xl font-bold leading-[1.1] text-navy-800 sm:text-6xl">
+            Before life gets too busy, travel.
           </h1>
-          <p className="mt-5 max-w-xl text-lg text-navy-600">
-            Browse every corner of India with real, informative guides — then
-            add the places that pull you in to your Trip Bag. We&apos;ll
-            auto-build a day-by-day itinerary out of exactly what you chose.
+          <p className="mt-6 max-w-xl text-lg text-navy-600">
+            Every state, every union territory, {destinations.length} destinations — each with
+            what it is, how long it deserves, when to go and how to reach it. Add the ones
+            that pull you in, and we build the whole trip around them.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/destinations"
               className="rounded-lg bg-coral-500 px-6 py-3 text-sm font-semibold text-white shadow-card transition hover:bg-coral-600"
             >
-              Explore Destinations
+              Explore {destinations.length} destinations
             </Link>
             <Link
               href="/trip"
               className="rounded-lg border border-navy-300 bg-white px-6 py-3 text-sm font-semibold text-navy-700 transition hover:border-navy-500"
             >
-              Build a Trip
+              Build my trip
             </Link>
           </div>
-          <p className="mt-4 text-sm text-navy-500">
-            {destinations.length}+ places mapped across every region of India.
-          </p>
+
+          <dl className="mt-12 grid max-w-2xl grid-cols-2 gap-6 sm:grid-cols-4">
+            {[
+              ["36", "states & UTs"],
+              [String(destinations.length), "destinations"],
+              ["6", "zones"],
+              ["100%", "with a guide"],
+            ].map(([value, label]) => (
+              <div key={label}>
+                <dt className="font-display text-2xl font-bold text-navy-800">{value}</dt>
+                <dd className="text-xs uppercase tracking-wide text-navy-400">{label}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="font-display text-2xl font-semibold text-navy-800">
-            Start somewhere
-          </h2>
-          <Link href="/destinations" className="text-sm font-semibold text-coral-500">
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <h2 className="font-display text-2xl font-semibold text-navy-800">Start somewhere</h2>
+            <p className="mt-1 text-sm text-navy-500">
+              Six that show the range of what is in here.
+            </p>
+          </div>
+          <Link href="/destinations" className="shrink-0 text-sm font-semibold text-coral-500">
             View all →
           </Link>
         </div>
@@ -70,57 +85,98 @@ export default function HomePage() {
 
       <section className="border-y border-navy-100 bg-white py-14">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="font-display mb-6 text-2xl font-semibold text-navy-800">
+          <h2 className="font-display mb-2 text-2xl font-semibold text-navy-800">
             Travel by what pulls you in
           </h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {categories.map((category) => (
-              <Link
-                key={category}
-                href={`/destinations?category=${encodeURIComponent(category)}`}
-                className={`flex flex-col items-center gap-2 rounded-xl bg-gradient-to-br ${categoryStyle[category].gradient} px-4 py-6 text-center text-white shadow-card transition hover:scale-[1.02]`}
-              >
-                <span className="text-2xl">{categoryStyle[category].emoji}</span>
-                <span className="text-sm font-semibold">{category}</span>
-              </Link>
-            ))}
+          <p className="mb-6 text-sm text-navy-500">
+            Fourteen themes across the whole catalogue.
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+            {themes.map((theme) => {
+              const count = destinations.filter((d) => d.themes.includes(theme)).length;
+              return (
+                <Link
+                  key={theme}
+                  href={`/destinations?theme=${encodeURIComponent(theme)}`}
+                  className="flex flex-col items-center gap-1 rounded-xl border border-navy-100 bg-sand-50 px-3 py-5 text-center transition hover:border-coral-300 hover:bg-white"
+                >
+                  <span className="text-2xl" aria-hidden="true">
+                    {themeEmoji[theme]}
+                  </span>
+                  <span className="text-xs font-semibold text-navy-700">{theme}</span>
+                  <span className="text-[11px] text-navy-400">{count}</span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+        <h2 className="font-display mb-2 text-2xl font-semibold text-navy-800">
+          India, state by state
+        </h2>
+        <p className="mb-6 text-sm text-navy-500">
+          Six zones, 36 states and union territories. Every one of them is covered.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {zones.map((zone) => {
+            const zoneStates = states.filter((s) => s.zone === zone);
+            const count = destinations.filter((d) => d.zone === zone).length;
+            return (
+              <Link
+                key={zone}
+                href={`/states?zone=${encodeURIComponent(zone)}`}
+                className="rounded-xl border border-navy-100 bg-white p-5 shadow-card transition hover:-translate-y-0.5"
+              >
+                <div className="flex items-baseline justify-between">
+                  <h3 className="font-display font-semibold text-navy-800">{zone}</h3>
+                  <span className="text-xs text-navy-400">{count} places</span>
+                </div>
+                <p className="mt-2 text-sm text-navy-500">{zoneBlurbs[zone]}</p>
+                <p className="mt-3 text-xs text-navy-400">
+                  {zoneStates.length} states &amp; UTs
+                </p>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
         <div className="grid gap-10 rounded-2xl bg-navy-800 p-10 text-white sm:grid-cols-2 sm:p-14">
           <div>
             <h2 className="font-display text-3xl font-bold">
-              Add to your Trip Bag. Get a trip.
+              A Trip Bag that turns into a real itinerary.
             </h2>
             <p className="mt-4 text-navy-200">
-              Pick destinations the way you&apos;d save items you actually
-              want — not a checklist. Once you&apos;ve got a shortlist, we
-              group them by region, sequence the route, and give you a
-              realistic day-by-day plan with travel buffers built in.
+              Not a list of places — a plan. We sequence your picks by zone and state,
+              add the travel between them with mode and hours, work out which months
+              actually suit the whole trip, and flag the permits and ferries that
+              catch people out.
             </p>
-          </div>
-          <div className="flex flex-col justify-center gap-4">
-            <div className="flex items-center gap-3 rounded-lg bg-navy-700/60 p-4">
-              <span className="text-2xl">🎒</span>
-              <p className="text-sm">Add destinations to your Trip Bag as you browse.</p>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg bg-navy-700/60 p-4">
-              <span className="text-2xl">🗺️</span>
-              <p className="text-sm">We sequence them into regions and a sensible route.</p>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg bg-navy-700/60 p-4">
-              <span className="text-2xl">📅</span>
-              <p className="text-sm">Get a day-by-day itinerary, generated instantly.</p>
-            </div>
             <Link
               href="/trip"
-              className="mt-2 rounded-lg bg-coral-500 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-coral-600"
+              className="mt-6 inline-block rounded-lg bg-coral-500 px-6 py-3 text-sm font-semibold text-white hover:bg-coral-600"
             >
-              Generate My Trip
+              Build my trip
             </Link>
           </div>
+          <ul className="flex flex-col justify-center gap-3">
+            {[
+              ["🗺️", "Route sequenced across zones, states and districts"],
+              ["🚆", "Every hop costed: flight, train or road, with hours"],
+              ["📅", "Day-by-day plan, travel days included"],
+              ["🛂", "Permit, ferry, altitude and season warnings"],
+            ].map(([icon, text]) => (
+              <li key={text} className="flex items-center gap-3 rounded-lg bg-navy-700/60 p-4">
+                <span className="text-xl" aria-hidden="true">
+                  {icon}
+                </span>
+                <span className="text-sm">{text}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
     </div>

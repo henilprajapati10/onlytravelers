@@ -11,12 +11,13 @@ import {
 } from "react";
 import { destinations, type Destination } from "@/data/destinations";
 
-const STORAGE_KEY = "onlytravelers.cart.v1";
+const STORAGE_KEY = "onlytravelers.cart.v2";
 
 interface CartContextValue {
   cartSlugs: string[];
   cartItems: Destination[];
-  totalDays: number;
+  /** Time at destinations only — travel is added by the trip builder. */
+  daysAtDestinations: number;
   isInCart: (slug: string) => boolean;
   addToCart: (slug: string) => void;
   removeFromCart: (slug: string) => void;
@@ -37,11 +38,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          setCartSlugs(parsed.filter((s) => typeof s === "string"));
+          setCartSlugs(
+            parsed.filter(
+              (s): s is string => typeof s === "string" && destinations.some((d) => d.slug === s)
+            )
+          );
         }
       }
     } catch {
-      // ignore corrupted local storage
+      // corrupted or unavailable storage — start empty
     } finally {
       setIsHydrated(true);
     }
@@ -52,7 +57,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cartSlugs));
     } catch {
-      // storage unavailable (private mode, quota) — silently skip persistence
+      // storage blocked — the trip still works for this session
     }
   }, [cartSlugs, isHydrated]);
 
@@ -65,9 +70,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleCart = useCallback((slug: string) => {
-    setCartSlugs((prev) =>
-      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
-    );
+    setCartSlugs((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
   }, []);
 
   const clearCart = useCallback(() => setCartSlugs([]), []);
@@ -82,8 +85,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [cartSlugs]
   );
 
-  const totalDays = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.recommendedDays, 0),
+  const daysAtDestinations = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.idealDays, 0),
     [cartItems]
   );
 
@@ -91,7 +94,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     () => ({
       cartSlugs,
       cartItems,
-      totalDays,
+      daysAtDestinations,
       isInCart,
       addToCart,
       removeFromCart,
@@ -99,7 +102,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       clearCart,
       isHydrated,
     }),
-    [cartSlugs, cartItems, totalDays, isInCart, addToCart, removeFromCart, toggleCart, clearCart, isHydrated]
+    [
+      cartSlugs,
+      cartItems,
+      daysAtDestinations,
+      isInCart,
+      addToCart,
+      removeFromCart,
+      toggleCart,
+      clearCart,
+      isHydrated,
+    ]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
