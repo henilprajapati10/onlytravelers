@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #fbf8f3;
+  color: #0b1b30;
+}
+
+.text-gradient-coral {
+  background: linear-gradient(90deg, #e8492a, #fa6d47);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bg-topo {
+  background-image: radial-gradient(circle at 1px 1px, rgba(11, 27, 48, 0.08) 1px, transparent 0);
+  background-size: 22px 22px;
+}
