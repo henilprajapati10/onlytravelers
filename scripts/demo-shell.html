@@ -1,0 +1,129 @@
+<title>OnlyTravelers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>/*__CSS__*/</style>
+
+<style>
+  :root{
+    --bg:#fbf8f3; --surface:#ffffff; --surface-alt:#f4ecdf;
+    --text:#0b1b30; --text-muted:#3f5578; --text-faint:#7488a8;
+    --border:#dde3ee;
+    --accent:#e8492a; --accent-hover:#c73820; --accent-ink:#ffffff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0a1320; --surface:#101d31; --surface-alt:#16243a;
+      --text:#eef2f7; --text-muted:#a9bcd8; --text-faint:#6f84a8;
+      --border:#243652;
+      --accent:#fa6d47; --accent-hover:#ff9679; --accent-ink:#0b1420;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0a1320; --surface:#101d31; --surface-alt:#16243a;
+    --text:#eef2f7; --text-muted:#a9bcd8; --text-faint:#6f84a8;
+    --border:#243652;
+    --accent:#fa6d47; --accent-hover:#ff9679; --accent-ink:#0b1420;
+  }
+
+  body{ background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; }
+  .font-display{ font-family:'Poppins',system-ui,sans-serif; text-wrap:balance; }
+  h1,h2,h3{ text-wrap:balance; }
+  .surface{ background:var(--surface); }
+  .surface-alt{ background:var(--surface-alt); }
+  .txt{ color:var(--text); }
+  .txt-muted{ color:var(--text-muted); }
+  .txt-faint{ color:var(--text-faint); }
+  .bd{ border-color:var(--border); }
+  .accent{ color:var(--accent); }
+  .bg-accent{ background:var(--accent); color:var(--accent-ink); }
+  .bg-accent:hover{ background:var(--accent-hover); }
+  .topo{ background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--text) 12%, transparent) 1px, transparent 0); background-size:22px 22px; }
+  select, input{ background:var(--surface); color:var(--text); }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+  ::selection{ background:var(--accent); color:var(--accent-ink); }
+  [hidden]{ display:none !important; }
+  .line-clamp-3{ display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  .scene svg{ display:block; width:100%; height:100%; }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+</style>
+
+<div class="flex min-h-screen flex-col">
+  <header class="sticky top-0 z-50 border-b bd" style="background:color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter:blur(8px);">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
+      <a href="#/" class="inline-flex shrink-0 items-center gap-2" aria-label="OnlyTravelers home">
+        <svg viewBox="0 0 100 70" width="34" height="24" fill="none" aria-hidden="true">
+          <path d="M40 4 C44 20 52 34 66 40 C74 43.5 80 44.5 90 45" stroke="var(--text)" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M6 58 C22 54 34 50 46 42 C54.5 36.5 60 32 66 26" stroke="var(--text)" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M18 62 C30 56 40 51 48 45" stroke="var(--text)" stroke-width="3.4" stroke-linecap="round"/>
+          <circle cx="78" cy="34" r="7.5" fill="var(--text)"/>
+          <circle cx="81" cy="32" r="0.9" fill="var(--bg)"/>
+          <path d="M85 34.5 L98 32.5 L85 30.5 Z" fill="#e8492a"/>
+        </svg>
+        <span class="font-display text-xl font-semibold lowercase leading-none"><span class="txt">only</span><span class="accent">travelers</span></span>
+      </a>
+
+      <nav class="order-3 flex w-full items-center gap-5 text-sm font-medium md:order-none md:w-auto md:gap-6">
+        <a href="#/destinations" class="nav-link txt-muted" data-route="destinations">Destinations</a>
+        <a href="#/states" class="nav-link txt-muted" data-route="states">States</a>
+        <a href="#/trip" class="nav-link txt-muted" data-route="trip">Build a Trip</a>
+        <a href="#/campaign" class="nav-link txt-muted" data-route="campaign">Campaign</a>
+      </nav>
+
+      <a href="#/cart" class="relative inline-flex shrink-0 items-center gap-2 rounded-full border bd surface px-3 py-1.5 text-sm font-semibold shadow-sm">
+        <span aria-hidden="true">🎒</span><span class="hidden sm:inline">Trip Bag</span>
+        <span id="cart-badge" hidden class="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold">0</span>
+      </a>
+    </div>
+  </header>
+
+  <div class="border-b bd surface-alt px-4 py-1.5 text-center text-xs txt-faint">
+    Interactive preview of the OnlyTravelers site · your Trip Bag is saved in this browser only
+  </div>
+
+  <main id="app" class="flex-1"></main>
+
+  <footer class="mt-auto text-white" style="background:#0b1b30;">
+    <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-3 sm:px-6">
+      <div>
+        <div class="mb-3 inline-flex items-center gap-2">
+          <svg viewBox="0 0 100 70" width="30" height="21" fill="none" aria-hidden="true">
+            <path d="M40 4 C44 20 52 34 66 40 C74 43.5 80 44.5 90 45" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round"/>
+            <path d="M6 58 C22 54 34 50 46 42 C54.5 36.5 60 32 66 26" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round"/>
+            <path d="M18 62 C30 56 40 51 48 45" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round"/>
+            <circle cx="78" cy="34" r="7.5" fill="#ffffff"/>
+            <circle cx="81" cy="32" r="0.9" fill="#0b1b30"/>
+            <path d="M85 34.5 L98 32.5 L85 30.5 Z" fill="#fa6d47"/>
+          </svg>
+          <span class="font-display text-lg font-semibold lowercase">only<span style="color:#fa6d47;">travelers</span></span>
+        </div>
+        <p class="max-w-xs text-sm text-navy-200">Be travelers, not tourists. Every state, every union territory, one honest destination at a time.</p>
+      </div>
+      <div>
+        <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-navy-300">Explore</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#/destinations" class="hover:text-coral-400">All destinations</a></li>
+          <li><a href="#/states" class="hover:text-coral-400">States &amp; UTs</a></li>
+          <li><a href="#/trip" class="hover:text-coral-400">Build a trip</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-navy-300">The campaign</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#/campaign" class="hover:text-coral-400">Travelers, not tourists</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mx-auto max-w-6xl border-t border-navy-700 px-4 py-6 text-xs text-navy-300 sm:px-6">
+      OnlyTravelers demo · 359 destinations across 36 states and union territories.
+    </div>
+  </footer>
+</div>
+
+<script>
+//__RUNTIME__
+</script>
+<script>
+//__APP__
+</script>
