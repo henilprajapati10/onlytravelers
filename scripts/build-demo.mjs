@@ -34,6 +34,11 @@ const MODULES = [
   "src/lib/trip.ts",
   "src/lib/suggest.ts",
   "src/lib/export.ts",
+  "src/data/trips.ts",
+  "src/data/profile.ts",
+  "src/data/operators.ts",
+  "src/lib/prep.ts",
+  "src/lib/bookings.ts",
 ];
 
 /** "src/data/guides/index.ts" -> canonical id "@/data/guides" */
@@ -97,6 +102,11 @@ ${registry}
     trip: __req("@/lib/trip"),
     suggest: __req("@/lib/suggest"),
     exportTrip: __req("@/lib/export"),
+    tripsData: __req("@/data/trips"),
+    profileData: __req("@/data/profile"),
+    operators: __req("@/data/operators"),
+    prep: __req("@/lib/prep"),
+    bookings: __req("@/lib/bookings"),
   };
 })();
 `;

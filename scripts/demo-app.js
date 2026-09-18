@@ -13,21 +13,89 @@
   const esc = (s) =>
     String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-  /* ---------- Trip Bag ---------- */
-  const KEY = "onlytravelers.demo.cart.v3";
+  /* ---------- trips ----------
+     Many named trips, with the active one's stops mirrored into `cart` so
+     every card, button and circuit keeps working unchanged. */
+  const KEY = "onlytravelers.demo.trips.v1";
+  const PROFILE_KEY = "onlytravelers.demo.profile.v1";
+  const CHECK_KEY = "onlytravelers.demo.checks.v1";
+  const SPEND_KEY = "onlytravelers.demo.spend.v1";
+
+  const store = { trips: [], activeId: null };
   let cart = [];
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const p = JSON.parse(raw);
-      if (Array.isArray(p)) cart = p.filter((s) => typeof s === "string" && bySlug(s));
-    }
-  } catch (e) {}
-  const save = () => {
+  let profile = Object.assign({}, OT.profileData.DEFAULT_PROFILE);
+
+  const readKey = (k, fallback) => {
     try {
-      localStorage.setItem(KEY, JSON.stringify(cart));
+      const raw = localStorage.getItem(k);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  };
+  const writeKey = (k, v) => {
+    try {
+      localStorage.setItem(k, JSON.stringify(v));
     } catch (e) {}
   };
+
+  const newId = () => "trip_" + Math.random().toString(36).slice(2, 9);
+
+  function makeTrip(name, slugs) {
+    const stamp = new Date().toISOString();
+    return {
+      id: newId(),
+      name: name || OT.tripsData.suggestTripName(slugs || []),
+      slugs: (slugs || []).filter(bySlug),
+      status: "planning",
+      createdAt: stamp,
+      updatedAt: stamp,
+    };
+  }
+
+  function loadState() {
+    const stored = readKey(KEY, null);
+    if (stored && Array.isArray(stored.trips)) {
+      store.trips = stored.trips.filter((t) => t && t.id && Array.isArray(t.slugs));
+      store.activeId = stored.activeId;
+    }
+    // Carry across the single bag this demo used to keep.
+    const legacy = readKey("onlytravelers.demo.cart.v3", null);
+    if (!store.trips.length && Array.isArray(legacy) && legacy.length) {
+      store.trips = [makeTrip(null, legacy.filter(bySlug))];
+      try { localStorage.removeItem("onlytravelers.demo.cart.v3"); } catch (e) {}
+    }
+    if (!store.trips.some((t) => t.id === store.activeId)) {
+      store.activeId = store.trips[0] ? store.trips[0].id : null;
+    }
+    cart = activeTrip() ? activeTrip().slugs.slice() : [];
+    const p = readKey(PROFILE_KEY, null);
+    if (p) profile = Object.assign({}, OT.profileData.DEFAULT_PROFILE, p);
+  }
+
+  function activeTrip() {
+    return store.trips.find((t) => t.id === store.activeId) || null;
+  }
+
+  /** Writes the working bag back to the active trip, creating one if needed. */
+  const save = () => {
+    let trip = activeTrip();
+    if (!trip) {
+      trip = makeTrip(null, cart);
+      store.trips.push(trip);
+      store.activeId = trip.id;
+    }
+    trip.slugs = cart.slice();
+    trip.updatedAt = new Date().toISOString();
+    if (trip.name === "New trip" && trip.slugs.length) {
+      trip.name = OT.tripsData.suggestTripName(trip.slugs);
+    }
+    writeKey(KEY, store);
+  };
+
+  const persistTrips = () => writeKey(KEY, store);
+
+  loadState();
   const inCart = (s) => cart.includes(s);
   const cartItems = () => cart.map(bySlug).filter(Boolean);
 
@@ -54,6 +122,29 @@
     const el = document.getElementById("cart-badge");
     el.textContent = String(cart.length);
     el.hidden = cart.length === 0;
+    const tab = document.getElementById("tab-badge");
+    if (tab) {
+      tab.textContent = String(cart.length);
+      tab.hidden = cart.length === 0;
+    }
+    const trip = activeTrip();
+    const label = document.getElementById("bag-label");
+    if (label) label.textContent = trip ? trip.name : "Trip Bag";
+  }
+
+  const TAB_MATCH = {
+    home: (v) => v === "home",
+    explore: (v) => ["destinations", "detail", "states", "state", "circuits"].indexOf(v) !== -1,
+    trips: (v) => ["trips", "workspace", "trip", "cart"].indexOf(v) !== -1,
+    profile: (v) => v === "profile",
+  };
+
+  function syncTabs(view) {
+    document.querySelectorAll(".tab").forEach((a) => {
+      const on = TAB_MATCH[a.dataset.tab] ? TAB_MATCH[a.dataset.tab](view) : false;
+      a.classList.toggle("accent", on);
+      a.classList.toggle("txt-faint", !on);
+    });
   }
 
   /* ---------- shared bits ---------- */
@@ -563,7 +654,15 @@
     ta.select();
   }
 
-  function tripView() {
+  function tripBody(trip, plan) {
+    // The workspace has already made this trip active, so the shared renderer
+    // below is looking at the same stops.
+    planner.month = trip.travelMonth || 0;
+    planner.budget = trip.daysAvailable || 0;
+    return tripView(true);
+  }
+
+  function tripView(embedded) {
     const items = cartItems();
     const trip = buildTrip(items, {
       travelMonth: planner.month || undefined,
@@ -587,11 +686,11 @@
     const sel = "rounded-lg border bd px-3 py-2 text-sm txt";
 
     return `
-    <div class="mx-auto max-w-4xl px-4 py-12 sm:px-6">
+    <div class="${embedded ? "" : "mx-auto max-w-4xl px-4 py-12 sm:px-6"}">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 class="font-display text-3xl font-bold txt">Your trip</h1>
-          <p class="mt-2 txt-muted">Built from ${trip.stops.length} ${trip.stops.length === 1 ? "destination" : "destinations"} across ${trip.statesCovered.length} ${trip.statesCovered.length === 1 ? "state" : "states"}, with travel between them costed in.</p>
+          ${embedded ? "" : '<h1 class="font-display text-3xl font-bold txt">Your trip</h1>'}
+          <p class="${embedded ? "" : "mt-2"} txt-muted">Built from ${trip.stops.length} ${trip.stops.length === 1 ? "destination" : "destinations"} across ${trip.statesCovered.length} ${trip.statesCovered.length === 1 ? "state" : "states"}, with travel between them costed in.</p>
         </div>
         <div class="flex flex-wrap gap-2">
           <button type="button" data-share class="rounded-lg border bd surface px-3 py-2 text-sm font-semibold txt">Share link</button>
@@ -752,6 +851,311 @@
     </div>`;
   }
 
+  /* ---------- trips hub ---------- */
+  function tripsView() {
+    if (!store.trips.length) {
+      return `<div class="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+        <h1 class="font-display text-3xl font-bold txt">My trips</h1>
+        <p class="mt-2 txt-muted">Nothing saved yet.</p>
+        <div class="mt-10 rounded-2xl border border-dashed bd surface p-10 text-center">
+          <h2 class="font-display text-lg font-semibold txt">Start with a place, or a circuit</h2>
+          <p class="mx-auto mt-2 max-w-md text-sm txt-muted">Add destinations as you browse and they collect into a trip. Or load one of the twelve circuits and edit it from there.</p>
+          <div class="mt-6 flex flex-wrap justify-center gap-3">
+            <a href="#/destinations" class="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold">Explore destinations</a>
+            <a href="#/circuits" class="rounded-lg border bd surface px-5 py-2.5 text-sm font-semibold txt">Browse circuits</a>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    return `<div class="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 class="font-display text-3xl font-bold txt">My trips</h1>
+          <p class="mt-2 txt-muted">${store.trips.length} ${store.trips.length === 1 ? "trip" : "trips"} on this device.</p>
+        </div>
+        <button type="button" data-new-trip class="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold">New trip</button>
+      </div>
+      <div class="mt-8 flex flex-col gap-4">
+        ${store.trips.map((t) => {
+          const items = t.slugs.map(bySlug).filter(Boolean);
+          const plan = buildTrip(items, { travelMonth: t.travelMonth, daysAvailable: t.daysAvailable });
+          const status = OT.tripsData.TRIP_STATUS.find((s) => s.id === t.status) || OT.tripsData.TRIP_STATUS[0];
+          const isActive = t.id === store.activeId;
+          return `<article class="rounded-2xl border ${isActive ? "border-coral-300" : "bd"} surface p-5 shadow-card">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold ${status.tone}">${status.label}</span>
+                  ${isActive ? '<span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" style="background:rgba(232,73,42,.15);color:#c73820">Active</span>' : ""}
+                </div>
+                <h2 class="font-display mt-2 text-xl font-semibold txt"><a href="#/trips/${t.id}">${esc(t.name)}</a></h2>
+                <p class="mt-1 text-sm txt-faint">${items.length ? `${items.length} stops${plan ? ` · ${plan.totalDays} days · ${plan.statesCovered.length} states` : ""}` : "No destinations yet"}${t.travelMonth ? ` · ${monthFull(t.travelMonth)}` : ""}</p>
+              </div>
+              <div class="flex shrink-0 flex-wrap gap-2">
+                ${isActive ? "" : `<button type="button" data-activate="${t.id}" class="rounded-lg border bd px-3 py-1.5 text-xs font-semibold txt">Make active</button>`}
+                <button type="button" data-delete-trip="${t.id}" class="rounded-lg px-3 py-1.5 text-xs font-semibold txt-faint">Delete</button>
+              </div>
+            </div>
+            ${items.length ? `<ol class="mt-3 flex flex-wrap gap-1.5">${items.slice(0, 6).map((d) => `<li class="rounded-full surface-alt px-2 py-0.5 text-[11px] font-medium txt-muted">${themeEmoji[d.themes[0]]} ${esc(d.name)}</li>`).join("")}${items.length > 6 ? `<li class="rounded-full surface-alt px-2 py-0.5 text-[11px] txt-faint">+${items.length - 6} more</li>` : ""}</ol>` : ""}
+            <div class="mt-4 flex flex-wrap gap-2">
+              <a href="#/trips/${t.id}" class="rounded-lg px-4 py-2 text-xs font-semibold text-white" style="background:#0b1b30">Open trip</a>
+              <a href="#/trips/${t.id}?tab=prep" class="rounded-lg border bd px-4 py-2 text-xs font-semibold txt">Prep list</a>
+              <a href="#/trips/${t.id}?tab=bookings" class="rounded-lg border bd px-4 py-2 text-xs font-semibold txt">Bookings</a>
+            </div>
+          </article>`;
+        }).join("")}
+      </div>
+    </div>`;
+  }
+
+  /* ---------- trip workspace ---------- */
+  const WORK_TABS = [
+    { id: "itinerary", label: "Itinerary", icon: "🗓️" },
+    { id: "prep", label: "Prep", icon: "✅" },
+    { id: "bookings", label: "Bookings", icon: "🎫" },
+    { id: "spend", label: "Spend", icon: "💸" },
+  ];
+
+  function checksFor(id) {
+    const all = readKey(CHECK_KEY, {});
+    return Array.isArray(all[id]) ? all[id] : [];
+  }
+  function spendFor(id) {
+    const all = readKey(SPEND_KEY, {});
+    return Array.isArray(all[id]) ? all[id] : [];
+  }
+
+  function workspaceView(tripId, tab) {
+    const trip = store.trips.find((t) => t.id === tripId);
+    if (!trip) {
+      return `<div class="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6">
+        <h1 class="font-display text-3xl font-bold txt">Trip not found</h1>
+        <a href="#/trips" class="mt-6 inline-block rounded-lg bg-accent px-6 py-3 text-sm font-semibold">My trips</a></div>`;
+    }
+    if (store.activeId !== trip.id) {
+      store.activeId = trip.id;
+      cart = trip.slugs.slice();
+      persistTrips();
+    }
+
+    const items = trip.slugs.map(bySlug).filter(Boolean);
+    const plan = buildTrip(items, { travelMonth: trip.travelMonth, daysAvailable: trip.daysAvailable });
+    const status = OT.tripsData.TRIP_STATUS.find((s) => s.id === trip.status) || OT.tripsData.TRIP_STATUS[0];
+    const prepItems = plan ? OT.prep.buildPrepList(plan, profile) : [];
+    const ticked = checksFor(trip.id);
+    const criticalLeft = prepItems.filter((p) => p.critical && ticked.indexOf(p.id) === -1).length;
+    const bookingTasks = plan ? OT.bookings.buildBookingTasks(plan, trip.startDate) : [];
+
+    const header = `
+      <a href="#/trips" class="text-sm font-medium txt-faint">← My trips</a>
+      <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
+        <div class="min-w-0 flex-1">
+          <h1 class="font-display text-3xl font-bold txt">${esc(trip.name)}</h1>
+          <p class="mt-1 text-sm txt-faint">${items.length} ${items.length === 1 ? "stop" : "stops"}${plan ? ` · ${plan.totalDays} days · ${plan.statesCovered.length} states` : ""}${trip.travelMonth ? ` · ${monthFull(trip.travelMonth)}` : ""}</p>
+        </div>
+        <select id="w-status" class="rounded-full px-3 py-1.5 text-xs font-semibold ${status.tone}">
+          ${OT.tripsData.TRIP_STATUS.map((s) => `<option value="${s.id}"${s.id === trip.status ? " selected" : ""}>${s.label}</option>`).join("")}
+        </select>
+      </div>
+      <div class="mt-6 flex gap-1 overflow-x-auto border-b bd pb-px">
+        ${WORK_TABS.map((t) => {
+          const on = t.id === tab;
+          const badgeN = t.id === "prep" && criticalLeft ? criticalLeft : t.id === "bookings" && bookingTasks.length ? bookingTasks.length : 0;
+          return `<a href="#/trips/${trip.id}${t.id === "itinerary" ? "" : "?tab=" + t.id}" class="flex shrink-0 items-center gap-1.5 rounded-t-lg px-2.5 py-2.5 text-sm font-semibold sm:px-4 ${on ? "accent" : "txt-muted"}" style="${on ? "border-bottom:2px solid var(--accent)" : "border-bottom:2px solid transparent"}">
+            <span aria-hidden="true">${t.icon}</span>${t.label}${badgeN ? `<span class="rounded-full surface-alt px-1.5 text-[10px] font-bold">${badgeN}</span>` : ""}</a>`;
+        }).join("")}
+      </div>`;
+
+    if (!items.length) {
+      return `<div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">${header}
+        <div class="mt-8 rounded-2xl border border-dashed bd surface p-10 text-center">
+          <h2 class="font-display text-lg font-semibold txt">This trip is empty</h2>
+          <p class="mx-auto mt-2 max-w-md text-sm txt-muted">Add destinations and everything else here fills in — the route, the prep list, what needs booking and in what order.</p>
+          <div class="mt-6 flex flex-wrap justify-center gap-3">
+            <a href="#/destinations" class="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold">Add destinations</a>
+            <a href="#/circuits" class="rounded-lg border bd surface px-5 py-2.5 text-sm font-semibold txt">Load a circuit</a>
+          </div>
+        </div></div>`;
+    }
+
+    let body = "";
+    if (tab === "itinerary") body = tripBody(trip, plan);
+    else if (tab === "prep") body = prepBody(trip, prepItems, ticked);
+    else if (tab === "bookings") body = bookingsBody(trip, bookingTasks);
+    else body = spendBody(trip, plan);
+
+    return `<div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">${header}<div class="mt-6">${body}</div></div>`;
+  }
+
+  function prepBody(trip, prepItems, ticked) {
+    const done = prepItems.filter((p) => ticked.indexOf(p.id) !== -1).length;
+    const criticalLeft = prepItems.filter((p) => p.critical && ticked.indexOf(p.id) === -1).length;
+    return `
+      <div class="rounded-xl border bd surface p-4 shadow-card">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h2 class="font-display font-semibold txt">${done} of ${prepItems.length} done</h2>
+            <p class="text-sm txt-muted">${criticalLeft ? `${criticalLeft} of them will stop the trip if you skip them.` : "Nothing critical outstanding."}</p>
+          </div>
+          <div class="h-2 w-24 overflow-hidden rounded-full surface-alt">
+            <div class="h-full bg-accent" style="width:${prepItems.length ? (done / prepItems.length) * 100 : 0}%"></div>
+          </div>
+        </div>
+        <p class="mt-3 text-xs txt-faint">Built from what is actually in this trip — permits, ferries, altitude, season and distance.</p>
+      </div>
+      ${OT.prep.groupPrep(prepItems).map((g) => `
+        <section class="mt-6">
+          <h3 class="font-display text-sm font-semibold uppercase tracking-wide txt-faint">${g.category}</h3>
+          <ul class="mt-3 flex flex-col gap-2">
+            ${g.items.map((item) => {
+              const isDone = ticked.indexOf(item.id) !== -1;
+              return `<li><label class="flex cursor-pointer gap-3 rounded-xl border p-4 ${isDone ? "bd surface-alt" : item.critical ? "border-coral-200 surface" : "bd surface"}">
+                <input type="checkbox" data-check="${item.id}" ${isDone ? "checked" : ""} class="mt-0.5 h-5 w-5 shrink-0" style="accent-color:var(--accent)"/>
+                <span class="min-w-0">
+                  <span class="font-display block font-semibold ${isDone ? "txt-faint line-through" : "txt"}">${esc(item.title)}${item.critical && !isDone ? ' <span class="ml-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase" style="background:rgba(232,73,42,.15);color:#c73820">Critical</span>' : ""}</span>
+                  <span class="mt-1 block text-sm txt-muted">${esc(item.detail)}</span>
+                  ${item.because && item.because.length ? `<span class="mt-1.5 block text-xs txt-faint">Because of: ${esc(item.because.join(", "))}</span>` : ""}
+                </span></label></li>`;
+            }).join("")}
+          </ul>
+        </section>`).join("")}`;
+  }
+
+  function bookingsBody(trip, tasks) {
+    return `
+      <div class="rounded-xl border bd surface p-4 shadow-card">
+        <h2 class="font-display font-semibold txt">${tasks.length} things to book, in this order</h2>
+        <p class="mt-1 text-sm txt-muted">Permits first, then the transport everything hangs off, then park entry, then rooms.</p>
+        <p class="mt-3 rounded-lg surface-alt p-3 text-xs txt-muted">We never quote a price. Fares and availability change by the week, so take the brief below to the operator and book at their live price.</p>
+      </div>
+      <label class="mt-4 flex flex-col gap-1 text-sm">
+        <span class="font-semibold txt">Start date</span>
+        <input type="date" id="w-start" value="${trip.startDate || ""}" class="w-full max-w-xs rounded-lg border bd px-3 py-2 text-sm txt"/>
+        <span class="text-xs txt-faint">Set this and every booking below gets a real date instead of a day number.</span>
+      </label>
+      <ul class="mt-5 flex flex-col gap-3">
+        ${tasks.map((task) => {
+          const providers = OT.operators.providersFor(task.kind);
+          return `<li class="rounded-xl border ${task.urgency === "first" ? "border-coral-400" : "bd"} surface p-4 shadow-card" ${task.urgency === "first" ? 'style="border-left-width:4px"' : ""}>
+            <div class="flex flex-wrap items-start justify-between gap-2">
+              <div class="min-w-0">
+                <span class="rounded surface-alt px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide txt-faint">${OT.operators.kindLabel(task.kind)}</span>
+                <h3 class="font-display mt-1.5 font-semibold txt">${esc(task.title)}</h3>
+                <p class="mt-1 text-sm txt-muted">${esc(task.brief)}</p>
+                ${task.urgencyNote ? `<p class="mt-1 text-xs font-medium accent">${esc(task.urgencyNote)}</p>` : ""}
+              </div>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              ${providers.map((p) => p.url
+                ? `<a href="${p.url}" target="_blank" rel="noopener noreferrer" title="${esc(p.note)}" class="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style="background:#0b1b30">${esc(p.name)} ↗${p.official ? " · official" : ""}</a>`
+                : `<span title="${esc(p.note)}" class="rounded-lg border border-dashed bd px-3 py-1.5 text-xs txt-faint">${esc(p.name)} — add your partner link</span>`).join("")}
+            </div>
+          </li>`;
+        }).join("")}
+      </ul>`;
+  }
+
+  function spendBody(trip, plan) {
+    const list = spendFor(trip.id);
+    const total = list.reduce((s, e) => s + e.amount, 0);
+    const days = plan ? plan.totalDays : 0;
+    const cats = {};
+    list.forEach((e) => (cats[e.category] = (cats[e.category] || 0) + e.amount));
+    const rows = Object.keys(cats).sort((a, b) => cats[b] - cats[a]);
+    const rupees = (n) => "₹" + n.toLocaleString("en-IN");
+
+    return `
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        ${[[rupees(total), "total so far"], [days ? rupees(Math.round(total / days)) : "—", "per day"], [String(list.length), "entries"]]
+          .map(([v, l]) => `<div class="rounded-xl border bd surface p-4 text-center shadow-card"><div class="font-display text-2xl font-bold tabular-nums txt">${v}</div><div class="text-xs uppercase tracking-wide txt-faint">${l}</div></div>`).join("")}
+      </div>
+      <form id="spend-form" class="mt-5 rounded-xl border bd surface p-4 shadow-card">
+        <h2 class="font-display text-sm font-semibold txt">Add a spend</h2>
+        <div class="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
+          <input id="sp-label" placeholder="What was it?" class="rounded-lg border bd px-3 py-2 text-sm txt"/>
+          <select id="sp-cat" class="rounded-lg border bd px-3 py-2 text-sm txt">
+            ${["Transport","Stay","Food","Entry & permits","Guides","Shopping","Other"].map((c) => `<option>${c}</option>`).join("")}
+          </select>
+          <input id="sp-amt" inputmode="numeric" placeholder="₹" class="w-24 rounded-lg border bd px-3 py-2 text-sm tabular-nums txt"/>
+          <button type="submit" class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold">Add</button>
+        </div>
+      </form>
+      ${rows.length ? `<div class="mt-5 rounded-xl border bd surface p-4 shadow-card">
+        <h2 class="font-display text-sm font-semibold txt">Where it went</h2>
+        <ul class="mt-3 flex flex-col gap-2">
+          ${rows.map((c) => `<li class="flex items-center gap-3 text-sm">
+            <span class="w-32 shrink-0 txt-muted">${c}</span>
+            <span class="h-2 flex-1 overflow-hidden rounded-full surface-alt"><span class="block h-full" style="width:${(cats[c] / total) * 100}%;background:var(--text-muted)"></span></span>
+            <span class="w-20 shrink-0 text-right font-semibold tabular-nums txt">${rupees(cats[c])}</span></li>`).join("")}
+        </ul></div>` : ""}
+      ${list.length ? `<ul class="mt-5 flex flex-col gap-2">${list.slice().reverse().map((e) => `
+        <li class="flex items-center gap-3 rounded-xl border bd surface p-3 text-sm shadow-card">
+          <span class="rounded surface-alt px-2 py-0.5 text-[11px] txt-faint">${esc(e.category)}</span>
+          <span class="min-w-0 flex-1 truncate txt">${esc(e.label)}</span>
+          <span class="font-semibold tabular-nums txt">${rupees(e.amount)}</span>
+          <button type="button" data-del-spend="${e.id}" class="rounded px-2 txt-faint">✕</button></li>`).join("")}</ul>`
+        : `<p class="mt-5 rounded-xl border border-dashed bd p-8 text-center text-sm txt-faint">Nothing logged yet. We never fill this in for you — fares and room rates move too fast for a guess to be worth anything.</p>`}`;
+  }
+
+  /* ---------- profile ---------- */
+  function profileView() {
+    const P = OT.profileData;
+    const chip = (on) => `rounded-full px-3 py-1.5 text-sm font-medium ${on ? "text-white" : "border bd surface txt-muted"}`;
+    const chipStyle = (on) => (on ? 'style="background:#0b1b30"' : "");
+    const completed = store.trips.filter((t) => t.status === "completed").length;
+    const seen = new Set(store.trips.filter((t) => t.status === "completed").flatMap((t) => t.slugs)).size;
+
+    return `<div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      <h1 class="font-display text-3xl font-bold txt">You</h1>
+      <p class="mt-2 txt-muted">How you travel, so the app plans the way you would. All of it stays on this device — there is no account.</p>
+      <div class="mt-6 grid grid-cols-3 gap-3">
+        ${[[String(store.trips.length), "trips saved"], [String(completed), "completed"], [String(seen), "places seen"]]
+          .map(([v, l]) => `<div class="rounded-xl border bd surface p-4 text-center shadow-card"><div class="font-display text-2xl font-bold tabular-nums txt">${v}</div><div class="text-xs uppercase tracking-wide txt-faint">${l}</div></div>`).join("")}
+      </div>
+      <div class="mt-6 flex flex-col gap-5">
+        <section class="rounded-2xl border bd surface p-5 shadow-card">
+          <h2 class="font-display font-semibold txt">The basics</h2>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <label class="flex flex-col gap-1 text-sm"><span class="font-medium txt-muted">Name</span>
+              <input id="pf-name" value="${esc(profile.name || "")}" placeholder="What should we call you?" class="rounded-lg border bd px-3 py-2 txt"/></label>
+            <label class="flex flex-col gap-1 text-sm"><span class="font-medium txt-muted">Home city</span>
+              <input id="pf-home" value="${esc(profile.homeCity || "")}" placeholder="Where do trips start?" class="rounded-lg border bd px-3 py-2 txt"/></label>
+          </div>
+        </section>
+        <section class="rounded-2xl border bd surface p-5 shadow-card">
+          <h2 class="font-display font-semibold txt">Your pace</h2>
+          <div class="mt-3 flex flex-col gap-2">
+            ${P.PACE_OPTIONS.map((p) => `<label class="flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${profile.pace === p.id ? "border-coral-300" : "bd"}">
+              <input type="radio" name="pace" data-pace="${p.id}" ${profile.pace === p.id ? "checked" : ""} class="mt-1" style="accent-color:var(--accent)"/>
+              <span><span class="block font-semibold txt">${p.label}</span><span class="block text-sm txt-muted">${esc(p.detail)}</span></span></label>`).join("")}
+          </div>
+        </section>
+        <section class="rounded-2xl border bd surface p-5 shadow-card">
+          <h2 class="font-display font-semibold txt">What pulls you in</h2>
+          <div class="mt-3 flex flex-wrap gap-2">
+            ${themes.map((t) => {
+              const on = (profile.interests || []).indexOf(t) !== -1;
+              return `<button type="button" data-interest="${t}" class="${chip(on)}" ${chipStyle(on)}>${themeEmoji[t]} ${t}</button>`;
+            }).join("")}
+          </div>
+        </section>
+        <section class="rounded-2xl border bd surface p-5 shadow-card">
+          <h2 class="font-display font-semibold txt">How you travel</h2>
+          <div class="mt-3 flex flex-col gap-4">
+            <div><span class="text-sm font-medium txt-muted">Usually with</span>
+              <div class="mt-2 flex flex-wrap gap-2">${P.COMPANY_OPTIONS.map((c) => `<button type="button" data-company="${c.id}" class="${chip(profile.company === c.id)}" ${chipStyle(profile.company === c.id)}>${c.label}</button>`).join("")}</div></div>
+            <div><span class="text-sm font-medium txt-muted">Where you stay</span>
+              <div class="mt-2 flex flex-wrap gap-2">${P.STAY_OPTIONS.map((s) => `<button type="button" data-stay="${s.id}" title="${esc(s.detail)}" class="${chip(profile.stayStyle === s.id)}" ${chipStyle(profile.stayStyle === s.id)}>${s.label}</button>`).join("")}</div></div>
+            <label class="flex items-center gap-3 text-sm">
+              <input type="checkbox" id="pf-veg" ${profile.vegetarian ? "checked" : ""} class="h-5 w-5" style="accent-color:var(--accent)"/>
+              <span class="txt">Vegetarian — add food notes to the prep list</span></label>
+          </div>
+        </section>
+      </div>
+    </div>`;
+  }
+
   /* ---------- campaign ---------- */
   const PRINCIPLES = [
     ["Go for understanding, not a checklist", "A tourist collects landmarks. A traveler asks why a place is the way it is — why Varanasi's ghats face the river the way they do, why Kutch turns white every winter. Every destination page here leads with that context first."],
@@ -791,8 +1195,13 @@
     if (parts[0] === "destinations") return parts.length > 1 ? { view: "detail", slug: parts[1] } : { view: "destinations", theme: params.get("theme") };
     if (parts[0] === "states") return parts.length > 1 ? { view: "state", id: parts[1] } : { view: "states", zone: params.get("zone") };
     if (parts[0] === "cart") return { view: "cart" };
+    if (parts[0] === "trips")
+      return parts.length > 1
+        ? { view: "workspace", id: parts[1], tab: params.get("tab") || "itinerary" }
+        : { view: "trips" };
     if (parts[0] === "trip") return { view: "trip", bag: params.get("bag") };
     if (parts[0] === "circuits") return { view: "circuits" };
+    if (parts[0] === "profile") return { view: "profile" };
     if (parts[0] === "campaign") return { view: "campaign" };
     return { view: "home" };
   }
@@ -819,15 +1228,23 @@
       }
       html = tripView();
     } else if (r.view === "circuits") html = circuitsView();
+    else if (r.view === "trips") html = tripsView();
+    else if (r.view === "workspace") html = workspaceView(r.id, r.tab);
+    else if (r.view === "profile") html = profileView();
     else if (r.view === "campaign") html = campaignView();
 
     document.getElementById("app").innerHTML = html;
     document.querySelectorAll(".nav-link").forEach((a) => {
-      const active = a.dataset.route === r.view || (r.view === "detail" && a.dataset.route === "destinations") || (r.view === "state" && a.dataset.route === "states");
+      const active =
+        a.dataset.route === r.view ||
+        (r.view === "detail" && a.dataset.route === "destinations") ||
+        (r.view === "state" && a.dataset.route === "states") ||
+        (r.view === "workspace" && a.dataset.route === "trips");
       a.classList.toggle("accent", active);
       a.classList.toggle("txt-muted", !active);
     });
     badge();
+    syncTabs(r.view);
     if (scroll !== false) window.scrollTo(0, 0);
   }
 
@@ -893,16 +1310,145 @@
       e.preventDefault();
       const panel = document.getElementById("copy-panel");
       if (panel) panel.remove();
+      return;
+    }
+
+    if (e.target.closest("[data-new-trip]")) {
+      e.preventDefault();
+      const t = makeTrip("New trip", []);
+      store.trips.push(t);
+      store.activeId = t.id;
+      cart = [];
+      persistTrips();
+      location.hash = "#/destinations";
+      return;
+    }
+    const act = e.target.closest("[data-activate]");
+    if (act) {
+      e.preventDefault();
+      store.activeId = act.dataset.activate;
+      const t = activeTrip();
+      cart = t ? t.slugs.slice() : [];
+      persistTrips();
+      render(false);
+      return;
+    }
+    const del = e.target.closest("[data-delete-trip]");
+    if (del) {
+      e.preventDefault();
+      const t = store.trips.find((x) => x.id === del.dataset.deleteTrip);
+      if (t && window.confirm(`Delete "${t.name}"? This cannot be undone.`)) {
+        store.trips = store.trips.filter((x) => x.id !== t.id);
+        if (store.activeId === t.id) {
+          store.activeId = store.trips[0] ? store.trips[0].id : null;
+          const a = activeTrip();
+          cart = a ? a.slugs.slice() : [];
+        }
+        persistTrips();
+        render(false);
+      }
+      return;
+    }
+    const delSpend = e.target.closest("[data-del-spend]");
+    if (delSpend) {
+      e.preventDefault();
+      const r = route();
+      const all = readKey(SPEND_KEY, {});
+      all[r.id] = (all[r.id] || []).filter((x) => x.id !== delSpend.dataset.delSpend);
+      writeKey(SPEND_KEY, all);
+      render(false);
+      return;
+    }
+    const interest = e.target.closest("[data-interest]");
+    if (interest) {
+      e.preventDefault();
+      const t = interest.dataset.interest;
+      const list = profile.interests || [];
+      profile.interests = list.indexOf(t) === -1 ? list.concat(t) : list.filter((x) => x !== t);
+      writeKey(PROFILE_KEY, profile);
+      render(false);
+      return;
+    }
+    const company = e.target.closest("[data-company]");
+    if (company) {
+      e.preventDefault();
+      profile.company = company.dataset.company;
+      writeKey(PROFILE_KEY, profile);
+      render(false);
+      return;
+    }
+    const stay = e.target.closest("[data-stay]");
+    if (stay) {
+      e.preventDefault();
+      profile.stayStyle = stay.dataset.stay;
+      writeKey(PROFILE_KEY, profile);
+      render(false);
     }
   });
 
+  document.addEventListener("submit", (e) => {
+    if (e.target.id !== "spend-form") return;
+    e.preventDefault();
+    const r = route();
+    const amount = Number(document.getElementById("sp-amt").value);
+    if (!isFinite(amount) || amount <= 0) return;
+    const label = document.getElementById("sp-label").value.trim();
+    const category = document.getElementById("sp-cat").value;
+    const all = readKey(SPEND_KEY, {});
+    all[r.id] = (all[r.id] || []).concat({
+      id: "exp_" + Math.random().toString(36).slice(2, 9),
+      category,
+      label: label || category,
+      amount: Math.round(amount),
+    });
+    writeKey(SPEND_KEY, all);
+    render(false);
+  });
+
   document.addEventListener("input", (e) => {
-    if (e.target.id === "f-q") { filters.q = e.target.value; filters.visible = 24; updateGrid(); }
+    if (e.target.id === "f-q") { filters.q = e.target.value; filters.visible = 24; updateGrid(); return; }
+    // Saved without re-rendering, or the field would lose focus mid-word.
+    if (e.target.id === "pf-name") { profile.name = e.target.value; writeKey(PROFILE_KEY, profile); return; }
+    if (e.target.id === "pf-home") { profile.homeCity = e.target.value; writeKey(PROFILE_KEY, profile); }
   });
 
   document.addEventListener("change", (e) => {
     const id = e.target.id;
-    if (id === "p-month") { planner.month = Number(e.target.value); render(false); return; }
+    const r = route();
+
+    if (e.target.dataset && e.target.dataset.check) {
+      const all = readKey(CHECK_KEY, {});
+      const list = all[r.id] || [];
+      const key = e.target.dataset.check;
+      all[r.id] = list.indexOf(key) === -1 ? list.concat(key) : list.filter((x) => x !== key);
+      writeKey(CHECK_KEY, all);
+      render(false);
+      return;
+    }
+    if (e.target.dataset && e.target.dataset.pace) {
+      profile.pace = e.target.dataset.pace;
+      writeKey(PROFILE_KEY, profile);
+      render(false);
+      return;
+    }
+    if (id === "pf-veg") { profile.vegetarian = e.target.checked; writeKey(PROFILE_KEY, profile); return; }
+    if (id === "w-status") {
+      const t = store.trips.find((x) => x.id === r.id);
+      if (t) { t.status = e.target.value; persistTrips(); render(false); }
+      return;
+    }
+    if (id === "w-start") {
+      const t = store.trips.find((x) => x.id === r.id);
+      if (t) { t.startDate = e.target.value; persistTrips(); render(false); }
+      return;
+    }
+    if (id === "p-month") {
+      planner.month = Number(e.target.value);
+      const t = r.view === "workspace" ? store.trips.find((x) => x.id === r.id) : null;
+      if (t) { t.travelMonth = planner.month || undefined; persistTrips(); }
+      render(false);
+      return;
+    }
     if (id === "p-budget") { planner.budget = Number(e.target.value); render(false); return; }
     if (id === "f-zone") { filters.zone = e.target.value; filters.state = "All"; filters.visible = 24; render(false); return; }
     if (id === "f-state") filters.state = e.target.value;
