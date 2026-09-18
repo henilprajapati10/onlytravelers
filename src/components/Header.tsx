@@ -4,18 +4,19 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Logo from "./Logo";
-import { useCart } from "@/context/CartContext";
+import { useCart, useTrips } from "@/context/TripsContext";
 
 const navLinks = [
   { href: "/destinations", label: "Destinations" },
   { href: "/states", label: "States" },
   { href: "/circuits", label: "Circuits" },
-  { href: "/trip", label: "Build a Trip" },
-  { href: "/campaign", label: "Campaign" },
+  { href: "/trips", label: "My Trips" },
+  { href: "/profile", label: "You" },
 ];
 
 export default function Header() {
   const { cartSlugs, isHydrated } = useCart();
+  const { activeTrip } = useTrips();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -42,11 +43,13 @@ export default function Header() {
 
         <div className="flex items-center gap-3">
           <Link
-            href="/cart"
+            href={activeTrip ? `/trips/${activeTrip.id}` : "/trips"}
             className="relative flex items-center gap-2 rounded-full border border-navy-200 bg-white px-3 py-1.5 text-sm font-semibold text-navy-700 shadow-sm transition hover:border-coral-400 hover:text-coral-500"
           >
             <span aria-hidden="true">🎒</span>
-            <span className="hidden sm:inline">Trip Bag</span>
+            <span className="hidden max-w-[10rem] truncate sm:inline">
+              {activeTrip?.name ?? "Trip Bag"}
+            </span>
             {isHydrated && cartSlugs.length > 0 && (
               <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-coral-500 text-xs font-bold text-white">
                 {cartSlugs.length}

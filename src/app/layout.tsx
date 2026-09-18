@@ -1,9 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Poppins, Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { CartProvider } from "@/context/CartContext";
+import TabBar from "@/components/TabBar";
+import AppRuntime from "@/components/AppRuntime";
+import { TripsProvider } from "@/context/TripsContext";
+import { ProfileProvider } from "@/context/ProfileContext";
 import { siteUrl } from "@/lib/site";
 
 const display = Poppins({
@@ -24,7 +27,13 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "359 destinations across all 36 Indian states and union territories, each with what it is, how long it deserves, when to go and how to reach it. Add the ones that pull you in and we build the trip around them.",
+    "Plan and carry your India trips: 359 destinations across all 36 states, itineraries with real travel time, prep lists, bookings and spend — offline when you need it.",
+  applicationName: "OnlyTravelers",
+  appleWebApp: {
+    capable: true,
+    title: "OnlyTravelers",
+    statusBarStyle: "default",
+  },
   openGraph: {
     title: "OnlyTravelers — Before life gets too busy, travel.",
     description:
@@ -34,17 +43,29 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#0b1b30",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body className={`${display.variable} ${body.variable} font-body`}>
-        <CartProvider>
-          <Header />
-          <main className="min-h-screen">{children}</main>
-          <Footer />
-        </CartProvider>
+        <ProfileProvider>
+          <TripsProvider>
+            <Header />
+            {/* Bottom padding clears the mobile tab bar. */}
+            <main className="min-h-screen pb-20 md:pb-0">{children}</main>
+            <Footer />
+            <TabBar />
+            <AppRuntime />
+          </TripsProvider>
+        </ProfileProvider>
       </body>
     </html>
   );

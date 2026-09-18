@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/context/TripsContext";
 import { buildTrip, formatMonths, monthFull, monthName, type TripWarning } from "@/lib/trip";
 import { formatDays, shortDays, themeEmoji } from "@/lib/format";
 import { downloadFile, parseBagParam, tripShareUrl, tripToIcs, tripToText } from "@/lib/export";

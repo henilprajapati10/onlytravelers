@@ -1,6 +1,6 @@
 "use client";
 
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/context/TripsContext";
 
 export default function AddToCartButton({
   slug,

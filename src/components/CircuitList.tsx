@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { circuits, circuitSummary } from "@/data/circuits";
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/context/TripsContext";
 import { buildTrip, formatMonths } from "@/lib/trip";
 import { shortDays, themeEmoji } from "@/lib/format";
 import { sceneSvg } from "@/lib/scene";

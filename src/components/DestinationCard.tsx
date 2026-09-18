@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Destination } from "@/data/destinations";
 import { getGuide } from "@/data/guides";
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/context/TripsContext";
 import { shortDays, themeEmoji } from "@/lib/format";
 import DestinationImage from "./DestinationImage";
 
