@@ -516,6 +516,53 @@
 
   const planner = { month: 0, budget: 0 };
 
+  /**
+   * On a normal website an anchor download just works. Inside the artifact
+   * viewer, a page may only hand over a file through the downloads
+   * capability, and only with an allowed extension — .ics is not one — so
+   * anything it will not take is shown as copyable text instead.
+   */
+  async function saveFile(filename, contents, mime) {
+    const dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
+    if (!dl) {
+      if (window.claude && window.claude.use) return showCopyPanel(filename, contents);
+      return downloadFile(filename, contents, mime);
+    }
+    try {
+      await dl.save({ filename, data: contents });
+    } catch (err) {
+      if (err && err.code === "declined") return;
+      showCopyPanel(filename, contents);
+    }
+  }
+
+  function showCopyPanel(filename, contents) {
+    const existing = document.getElementById("copy-panel");
+    if (existing) existing.remove();
+    const wrap = document.createElement("div");
+    wrap.id = "copy-panel";
+    wrap.className = "fixed inset-0 z-[60] flex items-center justify-center p-4";
+    wrap.style.background = "rgba(8,19,36,.6)";
+    wrap.innerHTML = `
+      <div class="flex max-h-[80vh] w-full max-w-2xl flex-col gap-3 rounded-2xl border bd surface p-5 shadow-card">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h2 class="font-display text-lg font-semibold txt">Your itinerary</h2>
+            <p class="mt-1 text-sm txt-muted">This preview can't hand you a <code>${esc(filename.split(".").pop())}</code> file directly. Copy the text below and save it as <strong>${esc(filename)}</strong> — on the live site the button downloads it straight away.</p>
+          </div>
+          <button type="button" data-close-copy class="rounded-md px-2 py-1 text-lg font-semibold txt-faint" aria-label="Close">✕</button>
+        </div>
+        <textarea readonly class="h-64 w-full flex-1 rounded-lg border bd p-3 font-mono text-xs txt" style="background:var(--surface-alt)">${esc(contents)}</textarea>
+        <div class="flex justify-end gap-2">
+          <button type="button" data-close-copy class="rounded-lg border bd px-4 py-2 text-sm font-semibold txt">Close</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const ta = wrap.querySelector("textarea");
+    ta.focus();
+    ta.select();
+  }
+
   function tripView() {
     const items = cartItems();
     const trip = buildTrip(items, {
@@ -834,12 +881,18 @@
       const trip = buildTrip(cartItems(), { travelMonth: planner.month || undefined, daysAvailable: planner.budget || undefined });
       if (!trip) return;
       if (exp.dataset.export === "txt") {
-        downloadFile("onlytravelers-itinerary.txt", tripToText(trip), "text/plain");
+        saveFile("onlytravelers-itinerary.txt", tripToText(trip), "text/plain");
       } else {
         const start = new Date();
         start.setDate(start.getDate() + 30);
-        downloadFile("onlytravelers-itinerary.ics", tripToIcs(trip, start), "text/calendar");
+        saveFile("onlytravelers-itinerary.ics", tripToIcs(trip, start), "text/calendar");
       }
+      return;
+    }
+    if (e.target.closest("[data-close-copy]")) {
+      e.preventDefault();
+      const panel = document.getElementById("copy-panel");
+      if (panel) panel.remove();
     }
   });
 
