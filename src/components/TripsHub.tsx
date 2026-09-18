@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTrips } from "@/context/TripsContext";
 import { TRIP_STATUS } from "@/data/trips";
 import { buildTrip, formatMonths, monthFull } from "@/lib/trip";
-import { shortDays, themeEmoji } from "@/lib/format";
+import { countLabel, shortDays, themeEmoji } from "@/lib/format";
 import { destinations } from "@/data/destinations";
 
 export default function TripsHub() {
@@ -108,7 +108,7 @@ export default function TripsHub() {
                         ? "No destinations yet"
                         : `${items.length} ${items.length === 1 ? "stop" : "stops"} · ${
                             plan ? `${plan.totalDays} days` : ""
-                          }${plan && plan.statesCovered.length ? ` · ${plan.statesCovered.length} states` : ""}`}
+                          }${plan && plan.statesCovered.length ? ` · ${countLabel(plan.statesCovered.length, "state")}` : ""}`}
                       {trip.travelMonth ? ` · ${monthFull(trip.travelMonth)}` : ""}
                     </p>
                   </div>

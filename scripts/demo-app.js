@@ -3,11 +3,15 @@
   const { destinations, themes } = OT.destinations;
   const { states, zones, zoneBlurbs, getState } = OT.states;
   const { guides } = OT.guides;
-  const { themeEmoji, formatDays, shortDays, seasonBadge } = OT.format;
+  const { themeEmoji, formatDays, shortDays, seasonBadge, countLabel } = OT.format;
   const { sceneSvg } = OT.scene;
   const { buildTrip, formatMonths, monthName, monthFull } = OT.trip;
   const { circuits, circuitSummary } = OT.circuits;
-  const { tripToText, tripToIcs, downloadFile, tripShareUrl } = OT.exportTrip;
+  const { tripToText, tripToIcs, downloadFile, tripShareUrl, tripEnquiry, whatsappUrl, mailtoUrl } = OT.exportTrip;
+  const { search: searchAll, SEARCH_SUGGESTIONS } = OT.search;
+  const { startTrip } = OT.starter;
+  const { todayFor, formatTripDate } = OT.today;
+  const { essentialsFor, NATIONAL_NUMBERS } = OT.essentials;
 
   const bySlug = (s) => destinations.find((d) => d.slug === s);
   const esc = (s) =>
@@ -20,6 +24,7 @@
   const PROFILE_KEY = "onlytravelers.demo.profile.v1";
   const CHECK_KEY = "onlytravelers.demo.checks.v1";
   const SPEND_KEY = "onlytravelers.demo.spend.v1";
+  const WALLET_KEY = "onlytravelers.demo.wallet.v1";
 
   const store = { trips: [], activeId: null };
   let cart = [];
@@ -137,6 +142,7 @@
     explore: (v) => ["destinations", "detail", "states", "state", "circuits"].indexOf(v) !== -1,
     trips: (v) => ["trips", "workspace", "trip", "cart"].indexOf(v) !== -1,
     profile: (v) => v === "profile",
+    search: () => false,
   };
 
   function syncTabs(view) {
@@ -231,6 +237,29 @@
   ];
 
   function homeView() {
+    // With a trip on the go, home opens on it — the hero is for people who
+    // have not started one.
+    const trip = activeTrip();
+    const items = trip ? trip.slugs.map(bySlug).filter(Boolean) : [];
+    const plan = items.length ? buildTrip(items, { travelMonth: trip.travelMonth, daysAvailable: trip.daysAvailable }) : null;
+    const hero = plan
+      ? `<section class="border-b bd surface-alt">
+           <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+             <p class="text-xs font-semibold uppercase tracking-wide txt-faint">Your trip</p>
+             <h1 class="font-display text-2xl font-bold txt">${esc(trip.name)}</h1>
+             <div class="mt-4">${todayBody(trip, plan)}</div>
+             <div class="mt-4 flex flex-wrap gap-2">
+               <a href="#/trips" class="rounded-lg border bd surface px-4 py-2 text-sm font-semibold txt">All my trips${store.trips.length > 1 ? ` (${store.trips.length})` : ""}</a>
+               <a href="#/start" class="rounded-lg border bd surface px-4 py-2 text-sm font-semibold txt">Plan another</a>
+               <a href="#/destinations" class="rounded-lg border bd surface px-4 py-2 text-sm font-semibold txt">Add a stop</a>
+             </div>
+           </div>
+         </section>`
+      : marketingHero();
+    return hero + homeBody();
+  }
+
+  function marketingHero() {
     return `
     <section class="topo border-b bd">
       <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
@@ -238,8 +267,8 @@
         <h1 class="font-display max-w-3xl text-4xl font-bold leading-[1.1] txt sm:text-6xl">Before life gets too busy, travel.</h1>
         <p class="mt-6 max-w-xl text-lg txt-muted">Every state, every union territory, ${destinations.length} destinations — each with what it is, how long it deserves, when to go and how to reach it. Add the ones that pull you in, and we build the whole trip around them.</p>
         <div class="mt-8 flex flex-wrap gap-3">
-          <a href="#/destinations" class="rounded-lg bg-accent px-6 py-3 text-sm font-semibold shadow-card">Explore ${destinations.length} destinations</a>
-          <a href="#/trip" class="rounded-lg border bd surface px-6 py-3 text-sm font-semibold txt">Build my trip</a>
+          <a href="#/start" class="rounded-lg bg-accent px-6 py-3 text-sm font-semibold shadow-card">Plan my trip in 30 seconds</a>
+          <a href="#/destinations" class="rounded-lg border bd surface px-6 py-3 text-sm font-semibold txt">Browse ${destinations.length} destinations</a>
         </div>
         <dl class="mt-12 grid max-w-2xl grid-cols-2 gap-6 sm:grid-cols-4">
           ${[["36", "states & UTs"], [String(destinations.length), "destinations"], ["6", "zones"], ["100%", "with a guide"]]
@@ -247,8 +276,11 @@
             .join("")}
         </dl>
       </div>
-    </section>
+    </section>`;
+  }
 
+  function homeBody() {
+    return `
     <section class="mx-auto max-w-6xl px-4 py-14 sm:px-6">
       <div class="mb-6 flex items-end justify-between gap-4">
         <div>
@@ -288,7 +320,7 @@
             return `<a href="#/states?zone=${encodeURIComponent(z)}" class="rounded-xl border bd surface p-5 shadow-card transition hover:-translate-y-0.5">
               <div class="flex items-baseline justify-between"><h3 class="font-display font-semibold txt">${z}</h3><span class="text-xs txt-faint">${n} places</span></div>
               <p class="mt-2 text-sm txt-muted">${esc(zoneBlurbs[z])}</p>
-              <p class="mt-3 text-xs txt-faint">${sc} states &amp; UTs</p></a>`;
+              <p class="mt-3 text-xs txt-faint">${countLabel(sc, "state")} &amp; UTs</p></a>`;
           })
           .join("")}
       </div>
@@ -890,7 +922,7 @@
                   ${isActive ? '<span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" style="background:rgba(232,73,42,.15);color:#c73820">Active</span>' : ""}
                 </div>
                 <h2 class="font-display mt-2 text-xl font-semibold txt"><a href="#/trips/${t.id}">${esc(t.name)}</a></h2>
-                <p class="mt-1 text-sm txt-faint">${items.length ? `${items.length} stops${plan ? ` · ${plan.totalDays} days · ${plan.statesCovered.length} states` : ""}` : "No destinations yet"}${t.travelMonth ? ` · ${monthFull(t.travelMonth)}` : ""}</p>
+                <p class="mt-1 text-sm txt-faint">${items.length ? `${countLabel(items.length, "stop")}${plan ? ` · ${countLabel(plan.totalDays, "day")} · ${countLabel(plan.statesCovered.length, "state")}` : ""}` : "No destinations yet"}${t.travelMonth ? ` · ${monthFull(t.travelMonth)}` : ""}</p>
               </div>
               <div class="flex shrink-0 flex-wrap gap-2">
                 ${isActive ? "" : `<button type="button" data-activate="${t.id}" class="rounded-lg border bd px-3 py-1.5 text-xs font-semibold txt">Make active</button>`}
@@ -911,6 +943,7 @@
 
   /* ---------- trip workspace ---------- */
   const WORK_TABS = [
+    { id: "today", label: "Today", icon: "📍" },
     { id: "itinerary", label: "Itinerary", icon: "🗓️" },
     { id: "prep", label: "Prep", icon: "✅" },
     { id: "bookings", label: "Bookings", icon: "🎫" },
@@ -952,7 +985,7 @@
       <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0 flex-1">
           <h1 class="font-display text-3xl font-bold txt">${esc(trip.name)}</h1>
-          <p class="mt-1 text-sm txt-faint">${items.length} ${items.length === 1 ? "stop" : "stops"}${plan ? ` · ${plan.totalDays} days · ${plan.statesCovered.length} states` : ""}${trip.travelMonth ? ` · ${monthFull(trip.travelMonth)}` : ""}</p>
+          <p class="mt-1 text-sm txt-faint">${countLabel(items.length, "stop")}${plan ? ` · ${countLabel(plan.totalDays, "day")} · ${countLabel(plan.statesCovered.length, "state")}` : ""}${trip.travelMonth ? ` · ${monthFull(trip.travelMonth)}` : ""}</p>
         </div>
         <select id="w-status" class="rounded-full px-3 py-1.5 text-xs font-semibold ${status.tone}">
           ${OT.tripsData.TRIP_STATUS.map((s) => `<option value="${s.id}"${s.id === trip.status ? " selected" : ""}>${s.label}</option>`).join("")}
@@ -980,12 +1013,99 @@
     }
 
     let body = "";
-    if (tab === "itinerary") body = tripBody(trip, plan);
+    if (tab === "today") body = todayBody(trip, plan);
+    else if (tab === "itinerary") body = tripBody(trip, plan);
     else if (tab === "prep") body = prepBody(trip, prepItems, ticked);
     else if (tab === "bookings") body = bookingsBody(trip, bookingTasks);
     else body = spendBody(trip, plan);
 
     return `<div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">${header}<div class="mt-6">${body}</div></div>`;
+  }
+
+  /* ---------- Today ---------- */
+  function todayBody(trip, plan) {
+    const state = todayFor(trip, plan);
+    if (!state) {
+      return `<div class="rounded-2xl border border-dashed bd surface p-5">
+        <h2 class="font-display font-semibold txt">Set a start date</h2>
+        <p class="mt-1 text-sm txt-muted">Add the date you leave and this becomes a day-by-day companion: where you are, what moves today, and what is next.</p>
+        <a href="#/trips/${trip.id}?tab=bookings" class="mt-3 inline-block rounded-lg border bd px-4 py-2 text-sm font-semibold txt">Set start date</a>
+      </div>`;
+    }
+    if (state.phase === "before") {
+      const first = state.next;
+      return `<div class="rounded-2xl border bd surface p-5 shadow-card">
+        <p class="text-xs font-semibold uppercase tracking-wide accent">${state.daysUntil === 1 ? "Tomorrow" : `In ${state.daysUntil} days`}</p>
+        <h2 class="font-display mt-1 text-xl font-semibold txt">${esc(trip.name)}</h2>
+        ${first ? `<p class="mt-1 text-sm txt-muted">Starts at ${esc(first.destination.name)}, ${esc(first.state.name)} on ${esc(formatTripDate(trip.startDate, 1))}.</p>` : ""}
+        <a href="#/trips/${trip.id}?tab=prep" class="mt-4 inline-block rounded-lg bg-accent px-4 py-2 text-sm font-semibold">Check the prep list</a>
+      </div>`;
+    }
+    if (state.phase === "after") {
+      return `<div class="rounded-2xl border bd surface p-5 shadow-card">
+        <h2 class="font-display text-xl font-semibold txt">That trip is done</h2>
+        <p class="mt-1 text-sm txt-muted">${countLabel(plan.totalDays, "day")}, ${countLabel(plan.stops.length, "stop")}, ${countLabel(plan.statesCovered.length, "state")}. Keep it — the next one starts from what this one taught you.</p>
+        <a href="#/start" class="mt-4 inline-block rounded-lg bg-accent px-4 py-2 text-sm font-semibold">Plan the next one</a>
+      </div>`;
+    }
+
+    const cur = state.current;
+    const ess = cur ? essentialsFor(cur.state.id) : null;
+    return `
+      <div class="rounded-2xl border bd surface p-5 shadow-card">
+        <p class="text-xs font-semibold uppercase tracking-wide accent">Day ${state.dayNumber} of ${plan.totalDays}</p>
+        ${state.todayLeg
+          ? `<h2 class="font-display mt-1 text-xl font-semibold txt">Moving today: ${esc(state.todayLeg.fromName)} → ${esc(state.todayLeg.toName)}</h2>
+             <p class="mt-1 text-sm txt-muted">${esc(state.todayLeg.mode)}, about ${state.todayLeg.approxKm} km / ${state.todayLeg.approxHours} hrs. ${esc(state.todayLeg.note)}</p>`
+          : cur
+            ? `<h2 class="font-display mt-1 text-xl font-semibold txt">${esc(cur.destination.name)}</h2>
+               <p class="mt-1 text-sm txt-muted">${esc(cur.destination.district)}, ${esc(cur.state.name)} · ${esc(cur.destination.rawTheme)}</p>`
+            : ""}
+        ${cur && guides[cur.destination.slug] ? `<p class="mt-3 text-sm txt-muted">${esc(guides[cur.destination.slug].tip)}</p>` : ""}
+      </div>
+
+      ${state.nextLeg && state.lastDayHere
+        ? `<div class="mt-4 rounded-xl border bd surface p-4">
+             <p class="text-xs font-semibold uppercase tracking-wide txt-faint">Next</p>
+             <p class="mt-1 text-sm txt">${esc(state.nextLeg.mode)} to ${esc(state.nextLeg.toName)} — about ${state.nextLeg.approxKm} km / ${state.nextLeg.approxHours} hrs.</p>
+           </div>`
+        : state.next
+          ? `<div class="mt-4 rounded-xl border bd surface p-4">
+               <p class="text-xs font-semibold uppercase tracking-wide txt-faint">After this</p>
+               <p class="mt-1 text-sm txt">${esc(state.next.destination.name)}, ${esc(state.next.state.name)}</p>
+             </div>`
+          : ""}
+
+      ${ess ? `<div class="mt-4 rounded-xl border bd surface p-4">
+        <h3 class="font-display text-sm font-semibold txt">On the ground in ${esc(cur.state.name)}</h3>
+        <dl class="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+          <div><dt class="text-xs uppercase tracking-wide txt-faint">Languages</dt><dd class="txt-muted">${esc(ess.languages.join(", "))}</dd></div>
+          <div><dt class="text-xs uppercase tracking-wide txt-faint">Getting around</dt><dd class="txt-muted">${esc(ess.gettingAround)}</dd></div>
+          <div><dt class="text-xs uppercase tracking-wide txt-faint">Eat</dt><dd class="txt-muted">${esc(ess.eat)}</dd></div>
+          <div><dt class="text-xs uppercase tracking-wide txt-faint">Watch for</dt><dd class="txt-muted">${esc(ess.watchFor)}</dd></div>
+        </dl>
+        <p class="mt-3 text-xs txt-faint">${NATIONAL_NUMBERS.map((n) => `${esc(n.label)} ${esc(n.number)}`).join(" · ")}</p>
+      </div>` : ""}`;
+  }
+
+  /* ---------- documents wallet ---------- */
+  function walletFor(id) {
+    const all = readKey(WALLET_KEY, {});
+    return all[id] && typeof all[id] === "object" ? all[id] : {};
+  }
+  function saveWallet(tripId, taskId, patch) {
+    const all = readKey(WALLET_KEY, {});
+    const forTrip = all[tripId] || {};
+    const prev = forTrip[taskId] || {};
+    const next = {
+      reference: patch.reference !== undefined ? patch.reference : prev.reference || "",
+      booked: patch.booked !== undefined ? patch.booked : prev.booked || false,
+    };
+    if (!next.reference && !next.booked) delete forTrip[taskId];
+    else forTrip[taskId] = next;
+    all[tripId] = forTrip;
+    writeKey(WALLET_KEY, all);
+    return forTrip;
   }
 
   function prepBody(trip, prepItems, ticked) {
@@ -1023,11 +1143,21 @@
   }
 
   function bookingsBody(trip, tasks) {
+    const wallet = walletFor(trip.id);
+    const booked = tasks.filter((t) => wallet[t.id] && wallet[t.id].booked).length;
+    const items = trip.slugs.map(bySlug).filter(Boolean);
+    const plan = buildTrip(items, { travelMonth: trip.travelMonth, daysAvailable: trip.daysAvailable });
+    const brief = plan ? tripEnquiry(plan, trip.startDate) : "";
     return `
       <div class="rounded-xl border bd surface p-4 shadow-card">
         <h2 class="font-display font-semibold txt">${tasks.length} things to book, in this order</h2>
-        <p class="mt-1 text-sm txt-muted">Permits first, then the transport everything hangs off, then park entry, then rooms.</p>
+        <p class="mt-1 text-sm txt-muted">Permits first, then the transport everything hangs off, then park entry, then rooms. ${booked} of ${tasks.length} booked.</p>
         <p class="mt-3 rounded-lg surface-alt p-3 text-xs txt-muted">We never quote a price. Fares and availability change by the week, so take the brief below to the operator and book at their live price.</p>
+        ${brief ? `<div class="mt-3 flex flex-wrap gap-2">
+          <a href="${whatsappUrl(brief)}" target="_blank" rel="noopener noreferrer" class="rounded-lg border bd px-3 py-1.5 text-xs font-semibold txt">Send on WhatsApp</a>
+          <a href="${mailtoUrl("Trip enquiry — " + trip.name, brief)}" class="rounded-lg border bd px-3 py-1.5 text-xs font-semibold txt">Email it</a>
+          <button type="button" data-copy-enquiry class="rounded-lg border bd px-3 py-1.5 text-xs font-semibold txt">Copy enquiry</button>
+        </div>` : ""}
       </div>
       <label class="mt-4 flex flex-col gap-1 text-sm">
         <span class="font-semibold txt">Start date</span>
@@ -1050,6 +1180,12 @@
               ${providers.map((p) => p.url
                 ? `<a href="${p.url}" target="_blank" rel="noopener noreferrer" title="${esc(p.note)}" class="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style="background:#0b1b30">${esc(p.name)} ↗${p.official ? " · official" : ""}</a>`
                 : `<span title="${esc(p.note)}" class="rounded-lg border border-dashed bd px-3 py-1.5 text-xs txt-faint">${esc(p.name)} — add your partner link</span>`).join("")}
+            </div>
+            <div class="mt-3 flex flex-wrap items-center gap-3 border-t bd pt-3">
+              <label class="flex items-center gap-2 text-xs font-semibold txt-muted">
+                <input type="checkbox" data-wallet-booked="${task.id}"${wallet[task.id] && wallet[task.id].booked ? " checked" : ""}/> Booked
+              </label>
+              <input type="text" data-wallet-ref="${task.id}" value="${esc((wallet[task.id] && wallet[task.id].reference) || "")}" placeholder="PNR / permit no / confirmation" aria-label="Reference for ${esc(task.title)}" class="min-w-0 flex-1 rounded-lg border bd px-3 py-1.5 text-xs txt"/>
             </div>
           </li>`;
         }).join("")}
@@ -1186,6 +1322,82 @@
   }
 
   /* ---------- router ---------- */
+  /* ---------- trip starter ---------- */
+  const DAY_CHOICES = [4, 7, 10, 14, 21];
+  const starter = { days: 7, month: new Date().getMonth() + 1, interests: [], result: null, ran: false };
+
+  function startView() {
+    const r = starter.result;
+    return `
+    <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      <h1 class="font-display text-3xl font-bold txt">Plan my trip</h1>
+      <p class="mt-2 txt-muted">Three questions. We check every stop against its season, add the travel between them, and give you something you can change.</p>
+
+      <div class="mt-6 flex flex-col gap-5 rounded-2xl border bd surface p-5 shadow-card">
+        <div>
+          <span class="text-sm font-semibold txt">How many days do you have?</span>
+          <div class="mt-2 flex flex-wrap gap-2">
+            ${DAY_CHOICES.map((d) => `<button type="button" data-start-days="${d}" class="rounded-full px-4 py-2 text-sm font-semibold ${d === starter.days ? "text-white" : "border bd txt-muted"}" ${d === starter.days ? 'style="background:#0b1b30"' : ""}>${d} days</button>`).join("")}
+          </div>
+        </div>
+
+        <div>
+          <span class="text-sm font-semibold txt">Roughly when?</span>
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            ${Array.from({ length: 12 }, (_, i) => i + 1).map((m) => `<button type="button" data-start-month="${m}" class="rounded-lg px-3 py-1.5 text-sm font-semibold ${m === starter.month ? "bg-accent" : "border bd txt-muted"}">${monthName(m)}</button>`).join("")}
+          </div>
+        </div>
+
+        <div>
+          <span class="text-sm font-semibold txt">What pulls you in? <span class="font-normal txt-faint">Leave empty for anything</span></span>
+          <div class="mt-2 flex flex-wrap gap-2">
+            ${themes.map((t) => `<button type="button" data-start-theme="${esc(t)}" class="rounded-full px-3 py-1.5 text-sm font-medium ${starter.interests.indexOf(t) !== -1 ? "text-white" : "border bd txt-muted"}" ${starter.interests.indexOf(t) !== -1 ? 'style="background:#0b1b30"' : ""}>${themeEmoji[t]} ${esc(t)}</button>`).join("")}
+          </div>
+        </div>
+
+        <button type="button" data-start-run class="self-start rounded-lg bg-accent px-6 py-3 text-sm font-semibold">Build me a trip</button>
+        <p class="text-xs txt-faint">Planning at a ${esc(profile.pace)} pace, from your profile.</p>
+      </div>
+
+      ${starter.ran && !r ? `<div class="mt-6 rounded-2xl border bd surface p-6">
+        <h2 class="font-display font-semibold txt">Nothing fits that yet</h2>
+        <p class="mt-2 text-sm txt-muted">Nothing in the catalogue is in season in ${monthFull(starter.month)} for those themes. Try a different month, or clear the themes and let us pick.</p>
+      </div>` : ""}
+
+      ${r ? `
+      <div class="mt-8">
+        ${r.relaxed === "interests" ? `<div class="mb-4 rounded-xl border bd surface-alt p-4" style="border-left:4px solid #f59e0b">
+          <h3 class="font-display text-sm font-semibold txt">Those themes are out of season in ${monthFull(starter.month)}</h3>
+          <p class="mt-1 text-sm txt-muted">${r.betterMonths && r.betterMonths.length ? `They are at their best in ${formatMonths(r.betterMonths)}. Here is what ${monthFull(starter.month)} is actually good for instead.` : `Here is what ${monthFull(starter.month)} is good for instead.`}</p>
+        </div>` : ""}
+
+        <article class="overflow-hidden rounded-2xl border bd surface shadow-card">
+          <div class="relative" style="aspect-ratio:16/5">
+            ${scene(r.slugs[0], r.plan.stops[0].destination.themes, 900, 280, "absolute inset-0 h-full w-full")}
+            <div class="absolute inset-0" style="background:linear-gradient(to top, rgba(8,19,33,.85), transparent)"></div>
+            <div class="absolute inset-x-0 bottom-0 p-5">
+              <h2 class="font-display text-2xl font-bold text-white">${r.plan.totalDays} days, ${r.plan.stops.length} ${r.plan.stops.length === 1 ? "stop" : "stops"}</h2>
+              <p class="text-sm" style="color:rgba(255,255,255,.8)">${r.plan.statesCovered.map(esc).join(" · ")}</p>
+            </div>
+          </div>
+          <div class="p-5">
+            <ul class="flex flex-col gap-1.5">
+              ${r.reasons.map((x) => `<li class="flex gap-2 text-sm txt-muted"><span class="accent" aria-hidden="true">✓</span>${esc(x)}</li>`).join("")}
+            </ul>
+            <ol class="mt-4 flex flex-wrap gap-1.5">
+              ${r.plan.stops.map((st, i) => `<li class="flex items-center gap-1">${i > 0 ? '<span class="txt-faint">→</span>' : ""}<a href="#/destinations/${st.destination.slug}" class="rounded-full surface-alt px-2.5 py-1 text-xs font-medium txt">${themeEmoji[st.destination.themes[0]]} ${esc(st.destination.name)}</a></li>`).join("")}
+            </ol>
+            <p class="mt-3 text-xs txt-faint">${shortDays(r.plan.daysAtDestinations)} at the places · ${shortDays(r.plan.travelDays)} in transit · ${r.plan.approxKm.toLocaleString("en-IN")} km</p>
+            <div class="mt-5 flex flex-wrap gap-2">
+              <button type="button" data-start-save class="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold">Save as my trip</button>
+              <button type="button" data-start-run class="rounded-lg border bd px-5 py-2.5 text-sm font-semibold txt">Try again</button>
+            </div>
+          </div>
+        </article>
+      </div>` : ""}
+    </div>`;
+  }
+
   function route() {
     const raw = (location.hash || "#/").replace(/^#/, "");
     const [path, qs] = raw.split("?");
@@ -1200,6 +1412,7 @@
         ? { view: "workspace", id: parts[1], tab: params.get("tab") || "itinerary" }
         : { view: "trips" };
     if (parts[0] === "trip") return { view: "trip", bag: params.get("bag") };
+    if (parts[0] === "start") return { view: "start" };
     if (parts[0] === "circuits") return { view: "circuits" };
     if (parts[0] === "profile") return { view: "profile" };
     if (parts[0] === "campaign") return { view: "campaign" };
@@ -1227,7 +1440,8 @@
         }
       }
       html = tripView();
-    } else if (r.view === "circuits") html = circuitsView();
+    } else if (r.view === "start") html = startView();
+    else if (r.view === "circuits") html = circuitsView();
     else if (r.view === "trips") html = tripsView();
     else if (r.view === "workspace") html = workspaceView(r.id, r.tab);
     else if (r.view === "profile") html = profileView();
@@ -1248,7 +1462,175 @@
     if (scroll !== false) window.scrollTo(0, 0);
   }
 
+  /* ---------- global search ----------
+     The overlay lives outside #app, so typing in it survives a re-render. */
+  const SEARCH_ICON = { destination: "📍", state: "🗺️", circuit: "🧭", theme: "🏷️", action: "⚡" };
+  let searchCursor = 0;
+  let searchHits = [];
+
+  const searchEl = () => document.getElementById("search-overlay");
+  const searchInput = () => document.getElementById("search-input");
+
+  function renderSearch() {
+    const q = searchInput().value;
+    const box = document.getElementById("search-results");
+    if (!q.trim()) {
+      searchHits = [];
+      box.innerHTML = `<div class="px-4 py-4">
+        <p class="mb-2 text-xs font-semibold uppercase tracking-wide txt-faint">Try</p>
+        <div class="flex flex-wrap gap-2">
+          ${SEARCH_SUGGESTIONS.map((x) => `<button type="button" data-search-suggest="${esc(x)}" class="rounded-full surface-alt px-3 py-1 text-sm txt-muted">${esc(x)}</button>`).join("")}
+        </div></div>`;
+      return;
+    }
+    searchHits = searchAll(q);
+    if (!searchHits.length) {
+      box.innerHTML = `<p class="px-4 py-8 text-center text-sm txt-muted">Nothing matches “${esc(q.trim())}”. Try a state, a district or a theme like Beach.</p>`;
+      return;
+    }
+    if (searchCursor >= searchHits.length) searchCursor = 0;
+    box.innerHTML = `<ul role="listbox" aria-label="Search results">${searchHits
+      .map((r, i) => {
+        const inBag = r.slug && cart.indexOf(r.slug) !== -1;
+        return `<li role="option" aria-selected="${i === searchCursor}" data-search-row="${i}" class="flex items-center gap-3 border-b bd px-4 py-3 ${i === searchCursor ? "surface-alt" : ""}">
+          <span aria-hidden="true" class="text-lg">${SEARCH_ICON[r.kind]}</span>
+          <button type="button" data-search-go="${i}" class="min-w-0 flex-1 text-left">
+            <span class="block truncate text-sm font-semibold txt">${esc(r.title)}</span>
+            <span class="block truncate text-xs txt-muted">${esc(r.subtitle)}</span>
+          </button>
+          ${r.slug ? `<button type="button" data-search-add="${esc(r.slug)}" class="shrink-0 rounded-lg border ${inBag ? "border-coral-400 accent" : "bd txt-muted"} px-2.5 py-1.5 text-xs font-semibold">${inBag ? "In trip" : "+ Trip"}</button>` : ""}
+        </li>`;
+      })
+      .join("")}</ul>`;
+  }
+
+  function openSearch() {
+    searchCursor = 0;
+    searchEl().hidden = false;
+    document.body.style.overflow = "hidden";
+    searchInput().value = "";
+    renderSearch();
+    setTimeout(() => searchInput().focus(), 20);
+  }
+  function closeSearch() {
+    searchEl().hidden = true;
+    document.body.style.overflow = "";
+  }
+
+  // The app's routes are hashes, so a result href becomes a hash jump.
+  function goSearch(i) {
+    const hit = searchHits[i];
+    if (!hit) return;
+    closeSearch();
+    location.hash = "#" + hit.href;
+  }
+
+  document.getElementById("search-open").addEventListener("click", openSearch);
+  document.getElementById("search-close").addEventListener("click", closeSearch);
+  document.getElementById("tab-search").addEventListener("click", (e) => {
+    e.preventDefault();
+    openSearch();
+  });
+  searchEl().addEventListener("click", (e) => {
+    if (e.target === searchEl()) closeSearch();
+  });
+  searchInput().addEventListener("input", () => {
+    searchCursor = 0;
+    renderSearch();
+  });
+  document.getElementById("search-results").addEventListener("click", (e) => {
+    const sug = e.target.closest("[data-search-suggest]");
+    if (sug) {
+      searchInput().value = sug.dataset.searchSuggest;
+      renderSearch();
+      searchInput().focus();
+      return;
+    }
+    const go = e.target.closest("[data-search-go]");
+    if (go) { goSearch(Number(go.dataset.searchGo)); return; }
+    const add = e.target.closest("[data-search-add]");
+    if (add) {
+      const slug = add.dataset.searchAdd;
+      const at = cart.indexOf(slug);
+      if (at === -1) cart.push(slug); else cart.splice(at, 1);
+      save();
+      badge();
+      renderSearch();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const open = !searchEl().hidden;
+    if (e.key === "Escape" && open) { e.preventDefault(); closeSearch(); return; }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openSearch(); return; }
+
+    const tag = e.target && e.target.tagName;
+    const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+    if (e.key === "/" && !open && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      openSearch();
+      return;
+    }
+    if (!open || !searchHits.length) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); searchCursor = (searchCursor + 1) % searchHits.length; renderSearch(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); searchCursor = (searchCursor - 1 + searchHits.length) % searchHits.length; renderSearch(); }
+    else if (e.key === "Enter") { e.preventDefault(); goSearch(searchCursor); }
+  });
+
   document.addEventListener("click", (e) => {
+    /* ---------- trip starter ---------- */
+    const sd = e.target.closest("[data-start-days]");
+    if (sd) { starter.days = Number(sd.dataset.startDays); render(false); return; }
+    const sm = e.target.closest("[data-start-month]");
+    if (sm) { starter.month = Number(sm.dataset.startMonth); render(false); return; }
+    const sth = e.target.closest("[data-start-theme]");
+    if (sth) {
+      const t = sth.dataset.startTheme;
+      const at = starter.interests.indexOf(t);
+      if (at === -1) starter.interests.push(t); else starter.interests.splice(at, 1);
+      render(false);
+      return;
+    }
+    if (e.target.closest("[data-start-run]")) {
+      e.preventDefault();
+      starter.ran = true;
+      starter.result = startTrip({
+        days: starter.days,
+        month: starter.month,
+        interests: starter.interests.slice(),
+        pace: profile.pace,
+      });
+      render(false);
+      return;
+    }
+    if (e.target.closest("[data-start-save]")) {
+      e.preventDefault();
+      if (!starter.result) return;
+      const trip = makeTrip(starter.result.plan.statesCovered.slice(0, 2).join(" to "), starter.result.slugs.slice());
+      trip.travelMonth = starter.month;
+      trip.daysAvailable = starter.days;
+      store.trips.unshift(trip);
+      store.activeId = trip.id;
+      cart = trip.slugs.slice();
+      persistTrips();
+      location.hash = "#/trips/" + trip.id;
+      return;
+    }
+
+    if (e.target.closest("[data-copy-enquiry]")) {
+      e.preventDefault();
+      const btn = e.target.closest("[data-copy-enquiry]");
+      const trip = activeTrip();
+      const items = trip ? trip.slugs.map(bySlug).filter(Boolean) : [];
+      const plan = items.length ? buildTrip(items, { travelMonth: trip.travelMonth, daysAvailable: trip.daysAvailable }) : null;
+      if (plan && navigator.clipboard) {
+        navigator.clipboard.writeText(tripEnquiry(plan, trip.startDate));
+        btn.textContent = "Copied ✓";
+        setTimeout(() => { btn.textContent = "Copy enquiry"; }, 1800);
+      }
+      return;
+    }
+
     const t = e.target.closest("[data-toggle]");
     if (t) { e.preventDefault(); toggle(t.dataset.toggle); return; }
     const rm = e.target.closest("[data-remove]");
@@ -1408,6 +1790,10 @@
   document.addEventListener("input", (e) => {
     if (e.target.id === "f-q") { filters.q = e.target.value; filters.visible = 24; updateGrid(); return; }
     // Saved without re-rendering, or the field would lose focus mid-word.
+    if (e.target.dataset && e.target.dataset.walletRef) {
+      saveWallet(route().id, e.target.dataset.walletRef, { reference: e.target.value });
+      return;
+    }
     if (e.target.id === "pf-name") { profile.name = e.target.value; writeKey(PROFILE_KEY, profile); return; }
     if (e.target.id === "pf-home") { profile.homeCity = e.target.value; writeKey(PROFILE_KEY, profile); }
   });
@@ -1416,6 +1802,11 @@
     const id = e.target.id;
     const r = route();
 
+    if (e.target.dataset && e.target.dataset.walletBooked) {
+      saveWallet(r.id, e.target.dataset.walletBooked, { booked: e.target.checked });
+      render(false);
+      return;
+    }
     if (e.target.dataset && e.target.dataset.check) {
       const all = readKey(CHECK_KEY, {});
       const list = all[r.id] || [];

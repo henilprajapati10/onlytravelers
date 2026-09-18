@@ -9,6 +9,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
@@ -39,6 +41,13 @@ const MODULES = [
   "src/data/operators.ts",
   "src/lib/prep.ts",
   "src/lib/bookings.ts",
+  "src/data/renown.ts",
+  "src/data/essentials.ts",
+  "src/lib/starter.ts",
+  "src/lib/today.ts",
+  "src/lib/search.ts",
+  "src/lib/storage.ts",
+  "src/lib/wallet.ts",
 ];
 
 /** "src/data/guides/index.ts" -> canonical id "@/data/guides" */
@@ -107,13 +116,36 @@ ${registry}
     operators: __req("@/data/operators"),
     prep: __req("@/lib/prep"),
     bookings: __req("@/lib/bookings"),
+    renown: __req("@/data/renown"),
+    essentials: __req("@/data/essentials"),
+    starter: __req("@/lib/starter"),
+    today: __req("@/lib/today"),
+    search: __req("@/lib/search"),
+    storage: __req("@/lib/storage"),
+    wallet: __req("@/lib/wallet"),
   };
 })();
 `;
 
 const ui = fs.readFileSync(path.join(root, "scripts", "demo-app.js"), "utf8");
 const shell = fs.readFileSync(path.join(root, "scripts", "demo-shell.html"), "utf8");
-const css = fs.readFileSync(path.join(root, "scripts", "demo.tw.css"), "utf8");
+// Regenerate the demo's CSS from the demo's own sources first, so a class
+// used only here can never silently do nothing.
+const cssFile = path.join(root, "scripts", "demo.tw.css");
+const cssIn = path.join(os.tmpdir(), "onlytravelers-demo-tw-in.css");
+fs.writeFileSync(cssIn, "@tailwind base;\n@tailwind components;\n@tailwind utilities;\n");
+execFileSync(
+  process.execPath,
+  [
+    path.join(root, "node_modules", "tailwindcss", "lib", "cli.js"),
+    "-c", path.join(root, "scripts", "demo.tailwind.config.js"),
+    "-i", cssIn,
+    "-o", cssFile,
+    "--minify",
+  ],
+  { cwd: root, stdio: ["ignore", "ignore", "inherit"] }
+);
+const css = fs.readFileSync(cssFile, "utf8");
 
 const html = shell
   .replace("/*__CSS__*/", () => css)

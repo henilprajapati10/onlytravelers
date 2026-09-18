@@ -10,7 +10,9 @@
     "test": "node tests/trip-invariants.mjs",
     "test:browser": "node tests/browser-features.mjs",
     "build:demo": "node scripts/build-demo.mjs",
-    "test:logic": "node tests/superapp-logic.mjs"
+    "test:logic": "node tests/superapp-logic.mjs",
+    "test:demo": "node tests/demo.mjs",
+    "test:super": "node tests/superapp.mjs"
   },
   "dependencies": {
     "next": "14.2.35",

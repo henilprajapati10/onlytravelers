@@ -72,6 +72,10 @@
         <a href="#/profile" class="nav-link txt-muted" data-route="profile">You</a>
       </nav>
 
+      <button type="button" id="search-open" aria-label="Search destinations, states and circuits" class="inline-flex shrink-0 items-center gap-2 rounded-full border bd surface px-3 py-1.5 text-sm txt-muted shadow-sm">
+        <span aria-hidden="true">🔎</span><span class="hidden lg:inline">Search</span><kbd class="hidden rounded border bd px-1 text-[10px] font-semibold txt-faint lg:inline">/</kbd>
+      </button>
+
       <a href="#/trips" class="relative inline-flex shrink-0 items-center gap-2 rounded-full border bd surface px-3 py-1.5 text-sm font-semibold shadow-sm">
         <span aria-hidden="true">🎒</span><span id="bag-label" class="hidden max-w-[10rem] truncate sm:inline">Trip Bag</span>
         <span id="cart-badge" hidden class="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold">0</span>
@@ -85,11 +89,23 @@
 
   <main id="app" class="flex-1 pb-20 md:pb-0"></main>
 
+  <div id="search-overlay" hidden class="fixed inset-0 z-[60]" style="background:color-mix(in srgb, #0b1b30 40%, transparent); backdrop-filter:blur(4px);">
+    <div role="dialog" aria-modal="true" aria-label="Search OnlyTravelers" class="mx-auto mt-[8vh] w-[min(42rem,calc(100%-1.5rem))] overflow-hidden rounded-2xl border bd surface shadow-card">
+      <div class="flex items-center gap-3 border-b bd px-4 py-3">
+        <span aria-hidden="true" class="text-lg">🔎</span>
+        <input id="search-input" type="search" aria-label="Search" placeholder="Search places, states, circuits — or type what you feel like" class="w-full bg-transparent text-base txt outline-none"/>
+        <button type="button" id="search-close" class="rounded-md border bd px-2 py-1 text-xs font-semibold txt-faint">Esc</button>
+      </div>
+      <div id="search-results" class="max-h-[60vh] overflow-y-auto"></div>
+    </div>
+  </div>
+
   <nav id="tabbar" aria-label="Main" class="fixed inset-x-0 bottom-0 z-50 border-t bd md:hidden" style="background:color-mix(in srgb, var(--surface) 96%, transparent); backdrop-filter:blur(8px);">
     <ul class="mx-auto flex max-w-lg">
       <li class="flex-1"><a href="#/" data-tab="home" class="tab flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold txt-faint"><span class="text-lg leading-none" aria-hidden="true">🧭</span>Discover</a></li>
       <li class="flex-1"><a href="#/destinations" data-tab="explore" class="tab flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold txt-faint"><span class="text-lg leading-none" aria-hidden="true">🗺️</span>Explore</a></li>
       <li class="flex-1"><a href="#/trips" data-tab="trips" class="tab relative flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold txt-faint"><span class="text-lg leading-none" aria-hidden="true">🎒</span>Trips<span id="tab-badge" hidden class="absolute right-1/2 top-1 translate-x-4 rounded-full bg-accent px-1.5 text-[10px] font-bold">0</span></a></li>
+      <li class="flex-1"><a href="#" data-tab="search" id="tab-search" class="tab flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold txt-faint"><span class="text-lg leading-none" aria-hidden="true">🔎</span>Search</a></li>
       <li class="flex-1"><a href="#/profile" data-tab="profile" class="tab flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold txt-faint"><span class="text-lg leading-none" aria-hidden="true">👤</span>You</a></li>
     </ul>
   </nav>

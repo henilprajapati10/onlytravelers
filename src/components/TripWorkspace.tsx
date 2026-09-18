@@ -8,7 +8,7 @@ import { useProfile } from "@/context/ProfileContext";
 import { destinations } from "@/data/destinations";
 import { TRIP_STATUS, type TripStatus } from "@/data/trips";
 import { buildTrip, formatMonths, monthFull } from "@/lib/trip";
-import { formatDays, shortDays } from "@/lib/format";
+import { countLabel, formatDays, shortDays } from "@/lib/format";
 import { buildPrepList, groupPrep } from "@/lib/prep";
 import { buildBookingTasks } from "@/lib/bookings";
 import { kindLabel, providersFor } from "@/data/operators";
@@ -191,7 +191,7 @@ export default function TripWorkspace() {
           )}
           <p className="mt-1 text-sm text-navy-400">
             {items.length} {items.length === 1 ? "stop" : "stops"}
-            {plan ? ` · ${plan.totalDays} days · ${plan.statesCovered.length} states` : ""}
+            {plan ? ` · ${countLabel(plan.totalDays, "day")} · ${countLabel(plan.statesCovered.length, "state")}` : ""}
             {trip.travelMonth ? ` · ${monthFull(trip.travelMonth)}` : ""}
           </p>
         </div>

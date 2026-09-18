@@ -5,7 +5,7 @@ import type { SavedTrip } from "@/data/trips";
 import type { TripPlan } from "@/lib/trip";
 import { todayFor, formatTripDate } from "@/lib/today";
 import { NATIONAL_NUMBERS, essentialsFor } from "@/data/essentials";
-import { themeEmoji } from "@/lib/format";
+import { countLabel, themeEmoji } from "@/lib/format";
 
 const LEG_ICON: Record<string, string> = {
   Flight: "✈️",
@@ -77,7 +77,7 @@ export default function TodayCard({
       <div className="rounded-2xl border border-navy-100 bg-white p-5 shadow-card">
         <h2 className="font-display text-xl font-semibold text-navy-800">{trip.name} is done</h2>
         <p className="mt-1 text-sm text-navy-500">
-          {plan.stops.length} stops, {plan.statesCovered.length} states,{" "}
+          {countLabel(plan.stops.length, "stop")}, {countLabel(plan.statesCovered.length, "state")},{" "}
           {plan.approxKm.toLocaleString("en-IN")} km.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">

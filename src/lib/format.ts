@@ -56,3 +56,8 @@ export function seasonBadge(d: Destination): { label: string; tone: "peak" | "mo
 export function isOpenInMonth(d: Destination, month: number): boolean {
   return d.bestMonths.includes(month);
 }
+
+/** "1 state", "3 states" — one stop and one state should not read as plural. */
+export function countLabel(n: number, singular: string, plural?: string): string {
+  return `${n} ${n === 1 ? singular : plural ?? singular + "s"}`;
+}
