@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTrips } from "@/context/TripsContext";
+import { openSearch } from "./GlobalSearch";
 
 /** The super-app spine on a phone: five places, always one tap away. */
 const TABS = [
@@ -14,6 +15,7 @@ const TABS = [
     match: (p: string) => p.startsWith("/destinations") || p.startsWith("/states") || p.startsWith("/circuits"),
   },
   { href: "/trips", label: "Trips", icon: "🎒", match: (p: string) => p.startsWith("/trips") || p.startsWith("/trip") },
+  { href: "#search", label: "Search", icon: "🔎", match: () => false },
   { href: "/profile", label: "You", icon: "👤", match: (p: string) => p.startsWith("/profile") },
 ];
 
@@ -36,6 +38,14 @@ export default function TabBar() {
             <li key={tab.href} className="flex-1">
               <Link
                 href={tab.href}
+                onClick={
+                  tab.href === "#search"
+                    ? (e) => {
+                        e.preventDefault();
+                        openSearch();
+                      }
+                    : undefined
+                }
                 aria-current={active ? "page" : undefined}
                 className={`relative flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold transition ${
                   active ? "text-coral-500" : "text-navy-400"

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTrips } from "@/context/TripsContext";
 import { useProfile } from "@/context/ProfileContext";
 import { destinations } from "@/data/destinations";
@@ -24,11 +24,16 @@ import {
   type ExpenseCategory,
 } from "@/lib/expenses";
 import { STORAGE_KEYS, readJson, writeJson } from "@/lib/storage";
+import { loadWallet, saveWalletEntry, walletSummary, type WalletEntry } from "@/lib/wallet";
+import { mailtoUrl, tripEnquiry, whatsappUrl } from "@/lib/export";
+import { todayFor } from "@/lib/today";
 import TripItinerary from "./TripItinerary";
+import TodayCard from "./TodayCard";
 
-type Tab = "itinerary" | "prep" | "bookings" | "spend";
+type Tab = "today" | "itinerary" | "prep" | "bookings" | "spend";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
+  { id: "today", label: "Today", icon: "📍" },
   { id: "itinerary", label: "Itinerary", icon: "🗓️" },
   { id: "prep", label: "Prep", icon: "✅" },
   { id: "bookings", label: "Bookings", icon: "🎫" },
@@ -47,18 +52,23 @@ export default function TripWorkspace() {
   const tripId = params?.id ?? "";
   const trip = trips.find((t) => t.id === tripId) ?? null;
 
+  /*
+   * The URL is the tab. Deriving it rather than mirroring it into state is
+   * what makes an in-app link to ?tab=prep actually move the tab — with a
+   * copy in state, a same-route navigation left the old tab on screen.
+   */
   const tabParam = search.get("tab") as Tab | null;
-  const [tab, setTab] = useState<Tab>(
-    tabParam && TABS.some((t) => t.id === tabParam) ? tabParam : "itinerary"
-  );
+  const tab: Tab = tabParam && TABS.some((t) => t.id === tabParam) ? tabParam : "itinerary";
   const [ticked, setTicked] = useState<string[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [wallet, setWallet] = useState<Record<string, WalletEntry>>({});
   const [renaming, setRenaming] = useState(false);
 
   useEffect(() => {
     if (tripId) {
       setTicked(readJson<ChecklistStore>(STORAGE_KEYS.checklists, {})[tripId] ?? []);
       setExpenses(loadExpenses(tripId));
+      setWallet(loadWallet(tripId));
     }
   }, [tripId]);
 
@@ -83,6 +93,23 @@ export default function TripWorkspace() {
       }),
     [items, trip?.travelMonth, trip?.daysAvailable]
   );
+
+  /*
+   * A trip that is under way — or about to be — should open on Today, not on
+   * a plan you already know. Only ever a default: an explicit ?tab= wins, and
+   * so does any tab the traveller picks afterwards.
+   */
+  const landedRef = useRef(false);
+  useEffect(() => {
+    if (landedRef.current || !isHydrated || tabParam || !trip || !plan?.stops.length) return;
+    landedRef.current = true;
+    const state = todayFor(trip, plan);
+    if (!state) return;
+    const imminent = state.phase === "before" && state.daysUntil <= 3;
+    if (state.phase === "during" || imminent) {
+      router.replace(`/trips/${trip.id}?tab=today`, { scroll: false });
+    }
+  }, [isHydrated, tabParam, trip, plan, router]);
 
   const prep = useMemo(() => (plan ? buildPrepList(plan, profile) : []), [plan, profile]);
   const bookings = useMemo(
@@ -113,7 +140,6 @@ export default function TripWorkspace() {
   }
 
   const setTabAndUrl = (next: Tab) => {
-    setTab(next);
     router.replace(`/trips/${trip.id}${next === "itinerary" ? "" : `?tab=${next}`}`, { scroll: false });
   };
 
@@ -245,6 +271,8 @@ export default function TripWorkspace() {
         </div>
       ) : (
         <div className="mt-6">
+          {tab === "today" && plan && <TodayCard trip={trip} plan={plan} />}
+
           {tab === "itinerary" && plan && (
             <TripItinerary
               plan={plan}
@@ -354,6 +382,35 @@ export default function TripWorkspace() {
                   We never quote a price. Fares and availability change by the week, so take the
                   brief below to the operator and book at their live price.
                 </p>
+
+                {plan && (
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold text-navy-500">
+                      {walletSummary(wallet, bookings.length).booked} of {bookings.length} booked
+                    </span>
+                    <a
+                      href={whatsappUrl(tripEnquiry(plan, trip.startDate))}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg border border-navy-200 px-3 py-1.5 text-xs font-semibold text-navy-700 hover:border-coral-300"
+                    >
+                      Send on WhatsApp
+                    </a>
+                    <a
+                      href={mailtoUrl(`Trip enquiry — ${trip.name}`, tripEnquiry(plan, trip.startDate))}
+                      className="rounded-lg border border-navy-200 px-3 py-1.5 text-xs font-semibold text-navy-700 hover:border-coral-300"
+                    >
+                      Email it
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard?.writeText(tripEnquiry(plan, trip.startDate))}
+                      className="rounded-lg border border-navy-200 px-3 py-1.5 text-xs font-semibold text-navy-700 hover:border-coral-300"
+                    >
+                      Copy enquiry
+                    </button>
+                  </div>
+                )}
               </div>
 
               <label className="mt-4 flex flex-col gap-1 text-sm">
@@ -399,6 +456,29 @@ export default function TripWorkspace() {
                         >
                           Copy details
                         </button>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-sand-50 p-2">
+                        <label className="flex items-center gap-2 text-xs font-semibold text-navy-700">
+                          <input
+                            type="checkbox"
+                            checked={wallet[task.id]?.booked ?? false}
+                            onChange={(e) =>
+                              setWallet(saveWalletEntry(trip.id, task.id, { booked: e.target.checked }))
+                            }
+                            className="h-4 w-4 accent-coral-500"
+                          />
+                          Booked
+                        </label>
+                        <input
+                          value={wallet[task.id]?.reference ?? ""}
+                          onChange={(e) =>
+                            setWallet(saveWalletEntry(trip.id, task.id, { reference: e.target.value }))
+                          }
+                          placeholder="PNR / permit no / confirmation"
+                          aria-label={`Reference for ${task.title}`}
+                          className="min-w-0 flex-1 rounded border border-navy-200 px-2 py-1 text-xs text-navy-800 focus:border-coral-400 focus:outline-none"
+                        />
                       </div>
 
                       <div className="mt-3 flex flex-wrap gap-2">

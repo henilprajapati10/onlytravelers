@@ -97,6 +97,31 @@ ok("permits are ordered first", /permit/i.test(firstTask), firstTask.split("\n")
 ok("no price is ever shown", (await page.locator("body").innerText()).match(/₹\s?\d/) === null);
 ok("operator hand-off shown", (await page.locator("text=/official|add your partner link/i").count()) > 0);
 
+/* ---------- documents wallet: a reference survives a reload ---------- */
+const refField = page.locator("input[aria-label^='Reference for']").first();
+const refLabel = await refField.getAttribute("aria-label");
+await refField.fill("PNR-4821993");
+await page.waitForTimeout(400);
+await page.reload({ waitUntil: "networkidle" });
+await page.waitForTimeout(800);
+await page.locator("button:has-text('Bookings')").first().click();
+await page.waitForTimeout(600);
+ok(
+  "booking reference persists in the wallet",
+  (await page.locator(`input[aria-label="${refLabel}"]`).inputValue()) === "PNR-4821993"
+);
+const bookedBox = page.locator("input[type='checkbox']").first();
+await bookedBox.check();
+await page.waitForTimeout(400);
+ok("booked count reflects the tick", (await page.locator("text=/1 of \\d+ booked/").count()) > 0);
+
+/* ---------- send a trip: real hand-off links, no invented URLs ---------- */
+const waHref = await page.locator("a:has-text('Send on WhatsApp')").first().getAttribute("href");
+ok("WhatsApp link is a real wa.me share", (waHref ?? "").startsWith("https://wa.me/?text="), (waHref ?? "").slice(0, 30));
+const mailHref = await page.locator("a:has-text('Email it')").first().getAttribute("href");
+ok("email link is a mailto with a body", (mailHref ?? "").startsWith("mailto:?subject=") && mailHref.includes("&body="));
+ok("the enquiry carries no price", !decodeURIComponent(waHref ?? "").match(/₹\s?\d/));
+
 await page.fill('input[type="date"]', "2026-11-05");
 await page.waitForTimeout(600);
 ok("start date turns day numbers into dates", (await page.locator("text=/Nov 2026/").count()) > 0);
@@ -136,6 +161,89 @@ await page.waitForTimeout(600);
 ok("second trip created", (await page.locator("article").count()) === 2);
 ok("exactly one trip is active", (await page.getByText("Active", { exact: true }).count()) === 1);
 
+/* ---------- trip starter: three answers to a real itinerary ---------- */
+await page.goto(B + "/start", { waitUntil: "networkidle" });
+await page.waitForTimeout(500);
+await page.locator("button[aria-pressed]:has-text('10 days')").first().click();
+await page.locator("button[aria-pressed]:has-text('Nov')").first().click();
+await page.locator("button[aria-pressed]:has-text('Hills')").first().click();
+await page.locator("button:has-text('Build me a trip')").click();
+await page.waitForTimeout(900);
+const headline = await page.locator("article h2").first().innerText();
+ok("starter produces a trip", /\d+ days, \d+ stops?/.test(headline), headline);
+const starterDays = Number(headline.match(/(\d+) days/)?.[1] ?? 0);
+ok("starter respects the 10-day budget", starterDays > 0 && starterDays <= 10, `${starterDays} days`);
+ok("starter explains its choices", (await page.locator("article li:has-text('✓'), article ul li").count()) > 0);
+
+await page.locator("button:has-text('Save as my trip')").click();
+await page.waitForTimeout(900);
+ok("saved starter trip opens a workspace", /\/trips\//.test(page.url()), page.url());
+
+/* ---------- Today: a dateless trip asks for a date, then becomes a companion ---------- */
+// No start date, so the workspace opens on the plan; Today is where it asks.
+await page.locator("button:has-text('Today')").first().click();
+await page.waitForTimeout(500);
+ok("a trip without a date asks for one", (await page.locator("text=Set a start date").count()) > 0);
+await page.locator("a:has-text('Set start date')").first().click();
+await page.waitForTimeout(700);
+// Regression: an in-app ?tab= link used to be a no-op, because the tab was
+// only read from the URL at mount.
+ok("the prompt lands on the tab that has the date field", (await page.locator('input[type="date"]').count()) > 0);
+ok("the URL reflects the tab", page.url().includes("tab=bookings"), page.url());
+await page.fill('input[type="date"]', "2026-11-05");
+await page.waitForTimeout(600);
+await page.goto(B + "/", { waitUntil: "networkidle" });
+await page.waitForTimeout(800);
+ok("home shows the trip, not the marketing hero", (await page.locator("text=Your trip").count()) > 0);
+ok("home counts down to departure", (await page.locator("text=/day|Day/").count()) > 0);
+ok("home links to all trips", (await page.locator("a:has-text('All my trips')").count()) > 0);
+
+// A trip starting in two days should open on Today, not on the plan.
+const soon = await page.evaluate(() => {
+  const d = new Date();
+  d.setDate(d.getDate() + 2);
+  return d.toISOString().slice(0, 10);
+});
+await page.goBack({ waitUntil: "networkidle" });
+await page.waitForTimeout(700);
+await page.locator("button:has-text('Bookings')").first().click();
+await page.waitForTimeout(500);
+await page.fill('input[type="date"]', soon);
+await page.waitForTimeout(600);
+const tripUrl = page.url().split("?")[0];
+await page.goto(tripUrl, { waitUntil: "networkidle" });
+await page.waitForTimeout(1000);
+ok("an imminent trip opens on Today", page.url().includes("tab=today"), page.url());
+ok("Today counts down", (await page.locator("text=/Tomorrow|In \\d+ days/").count()) > 0);
+
+/* ---------- global search on desktop ---------- */
+await page.keyboard.press("/");
+await page.waitForTimeout(400);
+const dialog = page.locator("[role=dialog][aria-label='Search OnlyTravelers']");
+ok("'/' opens search anywhere", await dialog.isVisible());
+await page.locator("input[aria-label='Search']").fill("alleppey");
+await page.waitForTimeout(300);
+const hits = await page.locator("[role=option]").count();
+ok("search returns results as you type", hits > 0, `${hits} hits`);
+const topHit = await page.locator("[role=option]").first().innerText();
+ok("Alleppey ranks first", /Alleppey/i.test(topHit), topHit.split("\n")[0]);
+
+// Add straight from the results — the point of searching mid-plan.
+await page.locator("[role=option]").first().locator("button:has-text('+ Trip')").click();
+await page.waitForTimeout(500);
+ok("search can add to the trip in place", (await page.locator("[role=option]").first().locator("button:has-text('In trip')").count()) > 0);
+await page.keyboard.press("Escape");
+await page.waitForTimeout(300);
+ok("Escape closes search", !(await dialog.isVisible()));
+
+await page.keyboard.press("/");
+await page.waitForTimeout(300);
+await page.locator("input[aria-label='Search']").fill("zzqqxnothingatall");
+await page.waitForTimeout(300);
+ok("empty search states so plainly", (await page.locator("text=/Nothing matches/").count()) > 0);
+await page.keyboard.press("Escape");
+await page.waitForTimeout(300);
+
 /* ---------- PWA plumbing ---------- */
 const mani = await page.goto(B + "/manifest.webmanifest");
 const manifest = await mani.json();
@@ -155,7 +263,7 @@ await m.goto(B + "/trips", { waitUntil: "networkidle" });
 await m.waitForTimeout(500);
 ok("tab bar visible on phone", await m.locator("nav[aria-label='Main']").isVisible());
 const tabs = await m.locator("nav[aria-label='Main'] a").count();
-ok("four tabs", tabs === 4, `${tabs}`);
+ok("five tabs", tabs === 5, `${tabs}`);
 for (const path of ["/", "/trips", "/profile", "/destinations"]) {
   await m.goto(B + path, { waitUntil: "networkidle" });
   await m.waitForTimeout(300);
@@ -164,6 +272,20 @@ for (const path of ["/", "/trips", "/profile", "/destinations"]) {
   );
   ok(`no h-scroll at 390px ${path}`, overflow <= 1, `${overflow}px`);
 }
+
+/* ---------- global search reaches the whole catalogue from a phone ---------- */
+await m.goto(B + "/", { waitUntil: "networkidle" });
+await m.waitForTimeout(400);
+await m.locator("nav[aria-label='Main'] a", { hasText: "Search" }).click();
+await m.waitForTimeout(400);
+ok("search opens from the phone tab bar", await m.locator("[role=dialog][aria-label='Search OnlyTravelers']").isVisible());
+await m.locator("input[aria-label='Search']").fill("pangong");
+await m.waitForTimeout(300);
+const mFirst = await m.locator("[role=option]").first().innerText();
+ok("search finds Pangong on mobile", /Pangong/i.test(mFirst), mFirst.split("\n")[0]);
+await m.locator("[role=option]").first().locator("button").first().click();
+await m.waitForURL("**/destinations/pangong-tso", { timeout: 10000 });
+ok("search result navigates", m.url().endsWith("/destinations/pangong-tso"));
 await m.close();
 
 console.log(`\n${pass} passed, ${fail} failed`);

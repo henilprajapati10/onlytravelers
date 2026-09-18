@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TabBar from "@/components/TabBar";
 import AppRuntime from "@/components/AppRuntime";
+import GlobalSearch from "@/components/GlobalSearch";
 import { TripsProvider } from "@/context/TripsContext";
 import { ProfileProvider } from "@/context/ProfileContext";
 import { siteUrl } from "@/lib/site";
@@ -33,6 +34,14 @@ export const metadata: Metadata = {
     capable: true,
     title: "OnlyTravelers",
     statusBarStyle: "default",
+  },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    shortcut: "/icon.svg",
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
     title: "OnlyTravelers — Before life gets too busy, travel.",
@@ -64,6 +73,7 @@ export default function RootLayout({
             <Footer />
             <TabBar />
             <AppRuntime />
+            <GlobalSearch />
           </TripsProvider>
         </ProfileProvider>
       </body>

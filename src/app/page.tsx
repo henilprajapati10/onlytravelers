@@ -2,6 +2,7 @@ import Link from "next/link";
 import { destinations, themes } from "@/data/destinations";
 import { states, zones, zoneBlurbs } from "@/data/states";
 import DestinationCard from "@/components/DestinationCard";
+import HomeHero from "@/components/HomeHero";
 import { themeEmoji } from "@/lib/format";
 
 const FEATURED = [
@@ -20,49 +21,7 @@ export default function HomePage() {
 
   return (
     <div>
-      <section className="bg-topo border-b border-navy-100">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-          <p className="mb-4 inline-block rounded-full bg-navy-800 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-white">
-            Be travelers, not tourists
-          </p>
-          <h1 className="font-display max-w-3xl text-4xl font-bold leading-[1.1] text-navy-800 sm:text-6xl">
-            Before life gets too busy, travel.
-          </h1>
-          <p className="mt-6 max-w-xl text-lg text-navy-600">
-            Every state, every union territory, {destinations.length} destinations — each with
-            what it is, how long it deserves, when to go and how to reach it. Add the ones
-            that pull you in, and we build the whole trip around them.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href="/destinations"
-              className="rounded-lg bg-coral-500 px-6 py-3 text-sm font-semibold text-white shadow-card transition hover:bg-coral-600"
-            >
-              Explore {destinations.length} destinations
-            </Link>
-            <Link
-              href="/circuits"
-              className="rounded-lg border border-navy-300 bg-white px-6 py-3 text-sm font-semibold text-navy-700 transition hover:border-navy-500"
-            >
-              Start from a circuit
-            </Link>
-          </div>
-
-          <dl className="mt-12 grid max-w-2xl grid-cols-2 gap-6 sm:grid-cols-4">
-            {[
-              ["36", "states & UTs"],
-              [String(destinations.length), "destinations"],
-              ["6", "zones"],
-              ["100%", "with a guide"],
-            ].map(([value, label]) => (
-              <div key={label}>
-                <dt className="font-display text-2xl font-bold text-navy-800">{value}</dt>
-                <dd className="text-xs uppercase tracking-wide text-navy-400">{label}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      </section>
+      <HomeHero />
 
       <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
         <div className="mb-6 flex items-end justify-between gap-4">
@@ -157,7 +116,7 @@ export default function HomePage() {
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
-                href="/trip"
+                href="/start"
                 className="inline-block rounded-lg bg-coral-500 px-6 py-3 text-sm font-semibold text-white hover:bg-coral-600"
               >
                 Build my trip

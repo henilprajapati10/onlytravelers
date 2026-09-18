@@ -5,6 +5,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Logo from "./Logo";
 import { useCart, useTrips } from "@/context/TripsContext";
+import { openSearch } from "./GlobalSearch";
 
 const navLinks = [
   { href: "/destinations", label: "Destinations" },
@@ -41,7 +42,19 @@ export default function Header() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={openSearch}
+            className="flex items-center gap-2 rounded-full border border-navy-200 bg-white px-3 py-1.5 text-sm text-navy-500 shadow-sm transition hover:border-coral-400 hover:text-coral-500"
+            aria-label="Search destinations, states and circuits"
+          >
+            <span aria-hidden="true">🔎</span>
+            <span className="hidden lg:inline">Search</span>
+            <kbd className="hidden rounded border border-navy-200 px-1 text-[10px] font-semibold text-navy-400 lg:inline">
+              /
+            </kbd>
+          </button>
           <Link
             href={activeTrip ? `/trips/${activeTrip.id}` : "/trips"}
             className="relative flex items-center gap-2 rounded-full border border-navy-200 bg-white px-3 py-1.5 text-sm font-semibold text-navy-700 shadow-sm transition hover:border-coral-400 hover:text-coral-500"

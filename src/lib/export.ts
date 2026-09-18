@@ -156,6 +156,47 @@ export function tripToIcs(plan: TripPlan, startDate: Date): string {
   return out.join("\r\n");
 }
 
+/** A short brief an operator can quote against, or a friend can read. */
+export function tripEnquiry(plan: TripPlan, startDate?: string): string {
+  const when = startDate
+    ? new Date(startDate).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })
+    : plan.commonMonths.length
+      ? `around ${plan.commonMonths.map(monthShort).join("/")}`
+      : "dates flexible";
+
+  const lines = [
+    `Trip enquiry — ${plan.totalDays} days in India`,
+    `Starting ${when}`,
+    "",
+    "Route:",
+    ...plan.stops.map(
+      (s, i) =>
+        `${i + 1}. ${s.destination.name} (${s.destination.district}, ${s.state.name}) — ${
+          s.endDay > s.startDay ? `days ${s.startDay}-${s.endDay}` : `day ${s.startDay}`
+        }`
+    ),
+    "",
+    `Arriving via ${plan.arrivalAirports[0] ?? "—"}, departing ${plan.departureAirports[0] ?? "—"}.`,
+    `About ${plan.approxKm.toLocaleString("en-IN")} km of travel between stops.`,
+  ];
+
+  const permits = plan.stops.filter((s) => s.destination.permitRequired);
+  if (permits.length) {
+    lines.push("", `Permits needed: ${permits.map((s) => s.destination.name).join(", ")}.`);
+  }
+  lines.push("", "Please quote for transport, stays and any entry permits.");
+  return lines.join("\n");
+}
+
+/** wa.me takes a plain-text message; this is the standard share link. */
+export function whatsappUrl(text: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+export function mailtoUrl(subject: string, body: string): string {
+  return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 export function downloadFile(filename: string, contents: string, mime: string) {
   const blob = new Blob([contents], { type: mime });
   const url = URL.createObjectURL(blob);
