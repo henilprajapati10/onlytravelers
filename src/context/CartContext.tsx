@@ -23,7 +23,25 @@ interface CartContextValue {
   removeFromCart: (slug: string) => void;
   toggleCart: (slug: string) => void;
   clearCart: () => void;
+  /** Adds several at once, skipping any already in the bag. */
+  addMany: (slugs: string[]) => void;
+  /** Replaces the bag wholesale — used by circuits and shared links. */
+  replaceAll: (slugs: string[]) => void;
   isHydrated: boolean;
+}
+
+/** Keeps only slugs that exist in the catalogue, with no duplicates. */
+function sanitise(slugs: unknown): string[] {
+  if (!Array.isArray(slugs)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const s of slugs) {
+    if (typeof s !== "string" || seen.has(s)) continue;
+    if (!destinations.some((d) => d.slug === s)) continue;
+    seen.add(s);
+    out.push(s);
+  }
+  return out;
 }
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
@@ -35,16 +53,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          setCartSlugs(
-            parsed.filter(
-              (s): s is string => typeof s === "string" && destinations.some((d) => d.slug === s)
-            )
-          );
-        }
-      }
+      if (raw) setCartSlugs(sanitise(JSON.parse(raw)));
     } catch {
       // corrupted or unavailable storage — start empty
     } finally {
@@ -75,6 +84,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => setCartSlugs([]), []);
 
+  const addMany = useCallback((slugs: string[]) => {
+    const clean = sanitise(slugs);
+    setCartSlugs((prev) => [...prev, ...clean.filter((s) => !prev.includes(s))]);
+  }, []);
+
+  const replaceAll = useCallback((slugs: string[]) => {
+    setCartSlugs(sanitise(slugs));
+  }, []);
+
   const isInCart = useCallback((slug: string) => cartSlugs.includes(slug), [cartSlugs]);
 
   const cartItems = useMemo(
@@ -100,6 +118,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeFromCart,
       toggleCart,
       clearCart,
+      addMany,
+      replaceAll,
       isHydrated,
     }),
     [
@@ -111,6 +131,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeFromCart,
       toggleCart,
       clearCart,
+      addMany,
+      replaceAll,
       isHydrated,
     ]
   );

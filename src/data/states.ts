@@ -25,6 +25,10 @@ export interface StateUnit {
   lng: number;
   permitRequired: boolean;
   ferryOrFlightOnly: boolean;
+  /** Small enough that moving between its destinations is local transport. */
+  compactUnit: boolean;
+  /** Districts are not contiguous — crossing between them is a real journey. */
+  nonContiguous: boolean;
   routingNote?: string;
 }
 
@@ -52,7 +56,9 @@ export const states: StateUnit[] = [
     lat: 28.61,
     lng: 77.21,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: true,
+    nonContiguous: false
   },
   {
     id: "uttar-pradesh",
@@ -68,7 +74,9 @@ export const states: StateUnit[] = [
     lat: 26.85,
     lng: 80.95,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "uttarakhand",
@@ -84,7 +92,9 @@ export const states: StateUnit[] = [
     lat: 30.32,
     lng: 78.03,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "himachal-pradesh",
@@ -100,7 +110,9 @@ export const states: StateUnit[] = [
     lat: 31.1,
     lng: 77.17,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "punjab",
@@ -116,7 +128,9 @@ export const states: StateUnit[] = [
     lat: 30.73,
     lng: 76.78,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "haryana",
@@ -132,7 +146,9 @@ export const states: StateUnit[] = [
     lat: 30.73,
     lng: 76.78,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "rajasthan",
@@ -148,7 +164,9 @@ export const states: StateUnit[] = [
     lat: 26.91,
     lng: 75.79,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "chandigarh",
@@ -164,7 +182,9 @@ export const states: StateUnit[] = [
     lat: 30.73,
     lng: 76.78,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: true,
+    nonContiguous: false
   },
   {
     id: "jammu-kashmir",
@@ -180,7 +200,9 @@ export const states: StateUnit[] = [
     lat: 34.08,
     lng: 74.8,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "ladakh",
@@ -196,7 +218,9 @@ export const states: StateUnit[] = [
     lat: 34.16,
     lng: 77.58,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "maharashtra",
@@ -212,7 +236,9 @@ export const states: StateUnit[] = [
     lat: 19.08,
     lng: 72.88,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "gujarat",
@@ -228,7 +254,9 @@ export const states: StateUnit[] = [
     lat: 23.22,
     lng: 72.68,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "goa",
@@ -244,7 +272,9 @@ export const states: StateUnit[] = [
     lat: 15.49,
     lng: 73.83,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: true,
+    nonContiguous: false
   },
   {
     id: "dadra-nagar-haveli-and-daman-diu",
@@ -261,6 +291,8 @@ export const states: StateUnit[] = [
     lng: 72.83,
     permitRequired: false,
     ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: true,
     routingNote: "Saurashtra & South Gujarat coast"
   },
   {
@@ -277,7 +309,9 @@ export const states: StateUnit[] = [
     lat: 12.97,
     lng: 77.59,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "kerala",
@@ -293,7 +327,9 @@ export const states: StateUnit[] = [
     lat: 8.52,
     lng: 76.94,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "tamil-nadu",
@@ -309,7 +345,9 @@ export const states: StateUnit[] = [
     lat: 13.08,
     lng: 80.27,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "andhra-pradesh",
@@ -325,7 +363,9 @@ export const states: StateUnit[] = [
     lat: 16.51,
     lng: 80.65,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "telangana",
@@ -341,7 +381,9 @@ export const states: StateUnit[] = [
     lat: 17.39,
     lng: 78.49,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "puducherry",
@@ -357,7 +399,9 @@ export const states: StateUnit[] = [
     lat: 11.94,
     lng: 79.83,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: true
   },
   {
     id: "lakshadweep",
@@ -373,7 +417,9 @@ export const states: StateUnit[] = [
     lat: 10.57,
     lng: 72.64,
     permitRequired: true,
-    ferryOrFlightOnly: true
+    ferryOrFlightOnly: true,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "andaman-nicobar-islands",
@@ -389,7 +435,9 @@ export const states: StateUnit[] = [
     lat: 11.62,
     lng: 92.73,
     permitRequired: false,
-    ferryOrFlightOnly: true
+    ferryOrFlightOnly: true,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "west-bengal",
@@ -405,7 +453,9 @@ export const states: StateUnit[] = [
     lat: 22.57,
     lng: 88.36,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "bihar",
@@ -421,7 +471,9 @@ export const states: StateUnit[] = [
     lat: 25.59,
     lng: 85.14,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "jharkhand",
@@ -437,7 +489,9 @@ export const states: StateUnit[] = [
     lat: 23.34,
     lng: 85.31,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "odisha",
@@ -453,7 +507,9 @@ export const states: StateUnit[] = [
     lat: 20.3,
     lng: 85.82,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "madhya-pradesh",
@@ -469,7 +525,9 @@ export const states: StateUnit[] = [
     lat: 23.26,
     lng: 77.41,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "chhattisgarh",
@@ -485,7 +543,9 @@ export const states: StateUnit[] = [
     lat: 21.25,
     lng: 81.63,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "assam",
@@ -501,7 +561,9 @@ export const states: StateUnit[] = [
     lat: 26.14,
     lng: 91.74,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "arunachal-pradesh",
@@ -517,7 +579,9 @@ export const states: StateUnit[] = [
     lat: 27.08,
     lng: 93.61,
     permitRequired: true,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "meghalaya",
@@ -533,7 +597,9 @@ export const states: StateUnit[] = [
     lat: 25.58,
     lng: 91.89,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "manipur",
@@ -549,7 +615,9 @@ export const states: StateUnit[] = [
     lat: 24.82,
     lng: 93.94,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "mizoram",
@@ -565,7 +633,9 @@ export const states: StateUnit[] = [
     lat: 23.73,
     lng: 92.72,
     permitRequired: true,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "nagaland",
@@ -581,7 +651,9 @@ export const states: StateUnit[] = [
     lat: 25.67,
     lng: 94.11,
     permitRequired: true,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "tripura",
@@ -597,7 +669,9 @@ export const states: StateUnit[] = [
     lat: 23.83,
     lng: 91.28,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   },
   {
     id: "sikkim",
@@ -613,7 +687,9 @@ export const states: StateUnit[] = [
     lat: 27.33,
     lng: 88.61,
     permitRequired: false,
-    ferryOrFlightOnly: false
+    ferryOrFlightOnly: false,
+    compactUnit: false,
+    nonContiguous: false
   }
 ];
 

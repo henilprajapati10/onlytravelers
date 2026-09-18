@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { destinations, themes, type Theme } from "@/data/destinations";
 import { states, zones, type Zone } from "@/data/states";
@@ -29,6 +29,19 @@ export default function DestinationsExplorer() {
   const [month, setMonth] = useState<number | 0>(0);
   const [maxDays, setMaxDays] = useState<number | 0>(0);
   const [visible, setVisible] = useState(PAGE_SIZE);
+
+  // Links like /destinations?theme=Beach are followed while this component is
+  // already mounted, so the filters have to follow the URL, not just the
+  // first render.
+  useEffect(() => {
+    const t = params.get("theme");
+    const z = params.get("zone");
+    const s = params.get("state");
+    if (t && themes.includes(t as Theme)) setTheme(t as Theme);
+    if (z && zones.includes(z as Zone)) setZone(z as Zone);
+    if (s && states.some((x) => x.id === s)) setStateId(s);
+    setVisible(PAGE_SIZE);
+  }, [params]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

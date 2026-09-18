@@ -62,6 +62,15 @@ const PALETTES: Record<Theme, Palette[]> = {
   ],
 };
 
+function hash(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
 /** xmur3-seeded mulberry32: stable across platforms, no dependency. */
 function rng(seed: string) {
   let h = 1779033703 ^ seed.length;
@@ -130,7 +139,9 @@ export function sceneSvg(
   const variants = PALETTES[theme] ?? PALETTES.Heritage;
   const p = variants[Math.floor(rand() * variants.length)] ?? variants[0];
   const kind = ARCHETYPE[theme] ?? "mountains";
-  const id = slug.replace(/[^a-z0-9]/g, "");
+  // Hashed, because two SVGs sharing a gradient id on one page makes the
+  // second one render with the first one's sky.
+  const id = "s" + hash(slug).toString(36);
 
   const sunX = round(w * (0.15 + rand() * 0.7));
   const sunY = round(h * (0.16 + rand() * 0.2));

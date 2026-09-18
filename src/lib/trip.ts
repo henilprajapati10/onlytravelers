@@ -1,5 +1,6 @@
 import { type Destination } from "@/data/destinations";
 import { getState, type StateUnit, type Zone } from "@/data/states";
+import { formatDays } from "@/lib/format";
 
 /**
  * Turns a Trip Bag into a day-by-day itinerary.
@@ -7,6 +8,11 @@ import { getState, type StateUnit, type Zone } from "@/data/states";
  * The directory is explicit on one point: "Days" in the catalogue is time AT
  * the destination and excludes travel to reach it. So every hop between
  * places gets its own costed travel leg, or the plan would be too optimistic.
+ *
+ * Time is tracked as a continuous cursor measured in days, not as whole
+ * calendar days. Half-day stops in the same area therefore share a day the
+ * way they would in reality, and a four-hour drive costs half a day rather
+ * than nothing.
  */
 
 const ZONE_ORDER: Zone[] = [
@@ -18,7 +24,14 @@ const ZONE_ORDER: Zone[] = [
   "Northeast India",
 ];
 
-export type TravelMode = "Walk / local transport" | "Road" | "Train or road" | "Flight" | "Ferry or flight";
+const EPSILON = 1e-9;
+
+export type TravelMode =
+  | "Walk / local transport"
+  | "Road"
+  | "Train or road"
+  | "Flight"
+  | "Ferry or flight";
 
 export interface TravelLeg {
   fromName: string;
@@ -28,18 +41,23 @@ export interface TravelLeg {
   approxKm: number;
   /** Door to door, including transfers. */
   approxHours: number;
-  /** Days this consumes in the itinerary. */
+  /** Days of the itinerary this consumes. Can be a fraction. */
   days: number;
   note: string;
 }
 
-export interface ItineraryDay {
-  day: number;
+export interface DayEntry {
   kind: "stay" | "travel";
   title: string;
   detail: string;
   destinationSlug?: string;
-  stateName?: string;
+  /** "Half day", "Full day", "Morning" — how much of the day this takes. */
+  share: string;
+}
+
+export interface ItineraryDay {
+  day: number;
+  entries: DayEntry[];
 }
 
 export interface TripStop {
@@ -49,10 +67,12 @@ export interface TripStop {
   endDay: number;
   /** The travel leg that gets you here. Absent for the first stop. */
   arrivalLeg?: TravelLeg;
+  /** True when the selected travel month is outside this stop's season. */
+  outOfSeason?: boolean;
 }
 
 export interface TripWarning {
-  kind: "permit" | "season" | "transport" | "pace" | "altitude";
+  kind: "permit" | "season" | "transport" | "pace" | "altitude" | "length";
   title: string;
   detail: string;
 }
@@ -60,29 +80,55 @@ export interface TripWarning {
 export interface TripPlan {
   stops: TripStop[];
   days: ItineraryDay[];
+  /** Calendar days the trip occupies, travel included. */
   totalDays: number;
+  /** Catalogue time at the destinations themselves. Matches the Trip Bag. */
   daysAtDestinations: number;
+  /** Days consumed by travel between stops. Can be a fraction. */
   travelDays: number;
   statesCovered: string[];
   zonesCovered: Zone[];
   approxKm: number;
+  approxTravelHours: number;
   /** Months (1-12) that suit every destination in the bag. */
   commonMonths: number[];
   /** How many destinations each month suits, indexed 0 = January. */
   monthFit: number[];
   /** The months that suit the most destinations, when none suits all. */
   bestPartialMonths: number[];
-  /** How many destinations bestPartialMonths suits. */
   bestPartialCount: number;
   warnings: TripWarning[];
   arrivalAirports: string[];
   departureAirports: string[];
+  /** Echoed back so the UI can render against what was asked for. */
+  travelMonth?: number;
+  daysAvailable?: number;
 }
 
-const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+export interface TripOptions {
+  /** 1-12. Marks stops that are out of season that month. */
+  travelMonth?: number;
+  /** Warns when the plan does not fit, and suggests what to cut. */
+  daysAvailable?: number;
+}
+
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
 
 export function monthName(m: number): string {
   return MONTH_NAMES[m - 1] ?? "";
+}
+
+const MONTH_FULL = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** Abbreviations belong in chips and tables, not in sentences. */
+export function monthFull(m: number): string {
+  return MONTH_FULL[m - 1] ?? "";
 }
 
 /** Formats [1,2,3,10,11,12] as "Oct-Mar". */
@@ -91,7 +137,7 @@ export function formatMonths(months: number[]): string {
   if (months.length === 12) return "Year round";
   const set = new Set(months);
   const runs: number[][] = [];
-  // rotate so a wrapping run is not split
+  // rotate so a run wrapping December is not split in two
   let start = 1;
   while (start <= 12 && set.has(start) && set.has(start === 1 ? 12 : start - 1)) start++;
   let current: number[] = [];
@@ -109,6 +155,9 @@ export function formatMonths(months: number[]): string {
     .map((r) => (r.length === 1 ? monthName(r[0]) : `${monthName(r[0])}-${monthName(r[r.length - 1])}`))
     .join(", ");
 }
+
+/** Re-exported so trip consumers have one import for day formatting. */
+export const formatDayCount = formatDays;
 
 function haversineKm(a: StateUnit, b: StateUnit): number {
   const R = 6371;
@@ -143,15 +192,33 @@ function buildLeg(from: Destination, to: Destination): TravelLeg {
     };
   }
 
-  if (sameDistrict) {
+  // Inside one district, or inside a unit small enough to cross locally,
+  // getting there is already part of the catalogue's time at the destination.
+  if (sameDistrict || (sameState && fromState.compactUnit)) {
     return {
       fromName: from.name,
       toName: to.name,
       mode: "Walk / local transport",
-      approxKm: km,
-      approxHours: 0.5,
+      approxKm: sameDistrict ? 25 : 40,
+      approxHours: sameDistrict ? 0.5 : 1,
       days: 0,
-      note: "Same area — fold this into the same day.",
+      note: sameDistrict
+        ? "Same area — no travel day needed, just move between them."
+        : `Both inside ${fromState.name}. Local transport; no travel day needed.`,
+    };
+  }
+
+  // Puducherry and Daman & Diu have districts in different parts of the
+  // country, so an intra-unit hop here is a full journey.
+  if (sameState && fromState.nonContiguous) {
+    return {
+      fromName: from.name,
+      toName: to.name,
+      mode: "Train or road",
+      approxKm: 400,
+      approxHours: 8,
+      days: 1,
+      note: `${fromState.name}'s districts are not contiguous — ${from.district} and ${to.district} are a full day apart by road.`,
     };
   }
 
@@ -198,7 +265,9 @@ function buildLeg(from: Destination, to: Destination): TravelLeg {
     approxKm: km,
     approxHours: 5,
     days: 1,
-    note: `Fly ${fromState.airports[0] ?? "the nearest airport"} to ${toState.airports[0] ?? "the nearest airport"}, then transfer by road.`,
+    note: `Fly ${fromState.airports[0] ?? "the nearest airport"} to ${
+      toState.airports[0] ?? "the nearest airport"
+    }, then transfer by road.`,
   };
 }
 
@@ -220,21 +289,36 @@ function sequence(items: Destination[]): Destination[] {
       list.push(d);
       byState.set(d.stateId, list);
     });
-    // states with more picks first, then group each state's picks by district
+    // states with more picks first, then keep each district's stops together
     [...byState.entries()]
       .sort((a, b) => b[1].length - a[1].length)
       .forEach(([, group]) => {
         group
           .slice()
-          .sort((a, b) => a.district.localeCompare(b.district) || a.name.localeCompare(b.name))
+          .sort(
+            (a, b) =>
+              a.district.localeCompare(b.district) ||
+              b.idealDays - a.idealDays ||
+              a.name.localeCompare(b.name)
+          )
           .forEach((d) => out.push(d));
       });
   });
   return out;
 }
 
-function collectWarnings(stops: TripStop[], commonMonths: number[]): TripWarning[] {
+function shareLabel(days: number): string {
+  if (days >= 1 - EPSILON) return days > 1 + EPSILON ? `${formatDayCount(days)}` : "Full day";
+  if (days >= 0.5 - EPSILON) return "Half day";
+  return "Short stop";
+}
+
+function collectWarnings(
+  plan: Omit<TripPlan, "warnings">,
+  options: TripOptions
+): TripWarning[] {
   const warnings: TripWarning[] = [];
+  const { stops, commonMonths, totalDays, zonesCovered } = plan;
 
   const permitStops = stops.filter((s) => s.destination.permitRequired);
   if (permitStops.length) {
@@ -257,7 +341,18 @@ function collectWarnings(stops: TripStop[], commonMonths: number[]): TripWarning
     });
   }
 
-  if (commonMonths.length === 0) {
+  if (options.travelMonth) {
+    const out = stops.filter((s) => s.outOfSeason);
+    if (out.length) {
+      warnings.push({
+        kind: "season",
+        title: `${out.length} ${out.length === 1 ? "stop is" : "stops are"} out of season in ${monthFull(options.travelMonth)}`,
+        detail: `${out
+          .map((s) => `${s.destination.name} (${s.destination.bestMonthsLabel})`)
+          .join(", ")}. Either move your dates, or swap these for something in season.`,
+      });
+    }
+  } else if (commonMonths.length === 0) {
     warnings.push({
       kind: "season",
       title: "No single month suits every destination",
@@ -291,8 +386,35 @@ function collectWarnings(stops: TripStop[], commonMonths: number[]): TripWarning
     });
   }
 
-  const zoneCount = new Set(stops.map((s) => s.destination.zone)).size;
-  const totalDays = stops.length ? stops[stops.length - 1].endDay : 0;
+  if (options.daysAvailable) {
+    const over = totalDays - options.daysAvailable;
+    if (over > 0) {
+      const droppable = [...stops]
+        .filter((s) => s.arrivalLeg)
+        .sort(
+          (a, b) =>
+            b.destination.idealDays + (b.arrivalLeg?.days ?? 0) -
+            (a.destination.idealDays + (a.arrivalLeg?.days ?? 0))
+        )
+        .slice(0, Math.min(3, stops.length - 1));
+      warnings.push({
+        kind: "length",
+        title: `This runs ${formatDayCount(over)} over your ${options.daysAvailable} days`,
+        detail: `The plan needs ${totalDays} days. The most expensive stops to keep are ${droppable
+          .map((s) => `${s.destination.name} (${formatDayCount(s.destination.idealDays + (s.arrivalLeg?.days ?? 0))} with travel)`)
+          .join(", ")} — dropping one usually brings it back into range.`,
+      });
+    } else if (over < -1) {
+      warnings.push({
+        kind: "length",
+        title: `You have ${formatDayCount(-over)} spare`,
+        detail:
+          "There is room for another stop, or for giving the places you already picked longer than the catalogue minimum.",
+      });
+    }
+  }
+
+  const zoneCount = zonesCovered.length;
   if (zoneCount >= 3 && totalDays < zoneCount * 6) {
     warnings.push({
       kind: "pace",
@@ -304,15 +426,24 @@ function collectWarnings(stops: TripStop[], commonMonths: number[]): TripWarning
   return warnings;
 }
 
-export function buildTrip(items: Destination[]): TripPlan | null {
+export function buildTrip(items: Destination[], options: TripOptions = {}): TripPlan | null {
   if (items.length === 0) return null;
 
   const ordered = sequence(items);
   const stops: TripStop[] = [];
-  const days: ItineraryDay[] = [];
+  const dayMap = new Map<number, DayEntry[]>();
 
-  let cursor = 1;
+  const pushEntry = (day: number, entry: DayEntry) => {
+    const list = dayMap.get(day) ?? [];
+    list.push(entry);
+    dayMap.set(day, list);
+  };
+
+  // Continuous position in the trip, measured in days from the start.
+  let cursor = 0;
   let approxKm = 0;
+  let travelDays = 0;
+  let approxTravelHours = 0;
 
   ordered.forEach((destination, i) => {
     const state = getState(destination.stateId)!;
@@ -321,45 +452,55 @@ export function buildTrip(items: Destination[]): TripPlan | null {
     if (i > 0) {
       arrivalLeg = buildLeg(ordered[i - 1], destination);
       approxKm += arrivalLeg.approxKm;
-      if (arrivalLeg.days >= 1) {
-        days.push({
-          day: cursor,
+      approxTravelHours += arrivalLeg.approxHours;
+
+      if (arrivalLeg.days > 0) {
+        const legStartDay = Math.floor(cursor + EPSILON) + 1;
+        pushEntry(legStartDay, {
           kind: "travel",
           title: `${arrivalLeg.fromName} → ${arrivalLeg.toName}`,
           detail: `${arrivalLeg.mode} · about ${arrivalLeg.approxKm} km, ${arrivalLeg.approxHours} hrs door to door. ${arrivalLeg.note}`,
+          share: shareLabel(arrivalLeg.days),
         });
-        cursor += 1;
+        cursor += arrivalLeg.days;
+        travelDays += arrivalLeg.days;
       }
     }
 
-    const stayDays = Math.max(1, Math.round(destination.idealDays));
-    const startDay = cursor;
-    const endDay = cursor + stayDays - 1;
+    const stayStart = cursor;
+    const stayEnd = cursor + destination.idealDays;
+    const startDay = Math.floor(stayStart + EPSILON) + 1;
+    const endDay = Math.max(startDay, Math.ceil(stayEnd - EPSILON));
 
     for (let d = startDay; d <= endDay; d++) {
       const nth = d - startDay + 1;
-      days.push({
-        day: d,
+      const spans = endDay - startDay + 1;
+      pushEntry(d, {
         kind: "stay",
         title: destination.name,
         detail:
-          nth === 1
-            ? `${destination.district}, ${state.name}. ${destination.rawTheme}. Directory allows ${destination.idealDays} ${
-                destination.idealDays === 1 ? "day" : "days"
-              } here.`
-            : `Second day at ${destination.name} — the directory's ideal length for this one.`,
+          spans === 1
+            ? `${destination.district}, ${state.name}. ${destination.rawTheme}.`
+            : `${destination.district}, ${state.name}. Day ${nth} of ${spans} here.`,
         destinationSlug: destination.slug,
-        stateName: state.name,
+        share: shareLabel(destination.idealDays),
       });
     }
 
-    stops.push({ destination, state, startDay, endDay, arrivalLeg });
-    cursor = endDay + 1;
+    const outOfSeason = options.travelMonth
+      ? !destination.bestMonths.includes(options.travelMonth)
+      : undefined;
+
+    stops.push({ destination, state, startDay, endDay, arrivalLeg, outOfSeason });
+    cursor = stayEnd;
   });
 
-  const totalDays = cursor - 1;
-  const daysAtDestinations = stops.reduce((sum, s) => sum + (s.endDay - s.startDay + 1), 0);
-  const travelDays = days.filter((d) => d.kind === "travel").length;
+  const totalDays = Math.max(1, Math.ceil(cursor - EPSILON));
+  const daysAtDestinations = ordered.reduce((sum, d) => sum + d.idealDays, 0);
+
+  const days: ItineraryDay[] = [...dayMap.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([day, entries]) => ({ day, entries }));
 
   const monthSets = items.map((d) => new Set(d.bestMonths));
   const commonMonths: number[] = [];
@@ -380,7 +521,7 @@ export function buildTrip(items: Destination[]): TripPlan | null {
   const firstState = getState(ordered[0].stateId)!;
   const lastState = getState(ordered[ordered.length - 1].stateId)!;
 
-  return {
+  const base = {
     stops,
     days,
     totalDays,
@@ -389,12 +530,16 @@ export function buildTrip(items: Destination[]): TripPlan | null {
     statesCovered,
     zonesCovered,
     approxKm: Math.round(approxKm),
+    approxTravelHours,
     commonMonths,
     monthFit,
     bestPartialMonths,
     bestPartialCount,
-    warnings: collectWarnings(stops, commonMonths),
     arrivalAirports: firstState.airports,
     departureAirports: lastState.airports,
+    travelMonth: options.travelMonth,
+    daysAvailable: options.daysAvailable,
   };
+
+  return { ...base, warnings: collectWarnings(base, options) };
 }

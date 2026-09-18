@@ -22,3 +22,35 @@ body {
   background-image: radial-gradient(circle at 1px 1px, rgba(11, 27, 48, 0.08) 1px, transparent 0);
   background-size: 22px 22px;
 }
+
+/* An itinerary people print and carry, or save as a PDF. */
+@media print {
+  header,
+  footer,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  main {
+    max-width: none;
+  }
+
+  a[href]::after {
+    content: "";
+  }
+
+  .shadow-card {
+    box-shadow: none !important;
+  }
+
+  /* Never split a stop across two sheets. */
+  article,
+  li,
+  .rounded-xl {
+    break-inside: avoid;
+  }
+}

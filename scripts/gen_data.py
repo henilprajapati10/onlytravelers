@@ -45,6 +45,14 @@ STATE_EXTRA = {
     'Sikkim':                    dict(lat=27.33, lng=88.61, railhead='No railway — New Jalpaiguri (NJP), then 4 hrs by road'),
 }
 
+# Units small enough that moving between two of their destinations is local
+# transport, already absorbed into the catalogue's time-at-destination.
+COMPACT_UNITS = {'Delhi', 'Chandigarh', 'Goa'}
+
+# Units whose districts are not contiguous — the PDF flags both of these.
+# Crossing between their pockets is a real journey, not an intra-state hop.
+NON_CONTIGUOUS_UNITS = {'Puducherry', 'Dadra & Nagar Haveli and Daman & Diu'}
+
 # ---- rules stated in the PDF appendix ----
 PERMIT_STATES = {'Arunachal Pradesh', 'Mizoram', 'Nagaland', 'Lakshadweep'}
 PERMIT_DISTRICTS = {('Sikkim', 'Mangan')}  # North Sikkim
@@ -178,6 +186,8 @@ for s in DIR['states']:
         'lng': extra['lng'],
         'permitRequired': name in PERMIT_STATES,
         'ferryOrFlightOnly': name in ISLAND_TRANSPORT_STATES,
+        'compactUnit': name in COMPACT_UNITS,
+        'nonContiguous': name in NON_CONTIGUOUS_UNITS,
         'routingNote': ROUTING_OVERRIDES.get(name),
     })
 
@@ -249,6 +259,10 @@ export interface StateUnit {
   lng: number;
   permitRequired: boolean;
   ferryOrFlightOnly: boolean;
+  /** Small enough that moving between its destinations is local transport. */
+  compactUnit: boolean;
+  /** Districts are not contiguous — crossing between them is a real journey. */
+  nonContiguous: boolean;
   routingNote?: string;
 }
 

@@ -41,10 +41,10 @@ export default function HomePage() {
               Explore {destinations.length} destinations
             </Link>
             <Link
-              href="/trip"
+              href="/circuits"
               className="rounded-lg border border-navy-300 bg-white px-6 py-3 text-sm font-semibold text-navy-700 transition hover:border-navy-500"
             >
-              Build my trip
+              Start from a circuit
             </Link>
           </div>
 
@@ -155,12 +155,20 @@ export default function HomePage() {
               actually suit the whole trip, and flag the permits and ferries that
               catch people out.
             </p>
-            <Link
-              href="/trip"
-              className="mt-6 inline-block rounded-lg bg-coral-500 px-6 py-3 text-sm font-semibold text-white hover:bg-coral-600"
-            >
-              Build my trip
-            </Link>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                href="/trip"
+                className="inline-block rounded-lg bg-coral-500 px-6 py-3 text-sm font-semibold text-white hover:bg-coral-600"
+              >
+                Build my trip
+              </Link>
+              <Link
+                href="/circuits"
+                className="inline-block rounded-lg border border-white/30 px-6 py-3 text-sm font-semibold text-white hover:border-white/70"
+              >
+                Browse 12 circuits
+              </Link>
+            </div>
           </div>
           <ul className="flex flex-col justify-center gap-3">
             {[

@@ -9,8 +9,9 @@ import { useCart } from "@/context/CartContext";
 const navLinks = [
   { href: "/destinations", label: "Destinations" },
   { href: "/states", label: "States" },
+  { href: "/circuits", label: "Circuits" },
   { href: "/trip", label: "Build a Trip" },
-  { href: "/campaign", label: "Our Campaign" },
+  { href: "/campaign", label: "Campaign" },
 ];
 
 export default function Header() {

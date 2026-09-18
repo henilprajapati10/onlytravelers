@@ -10,6 +10,7 @@ import DestinationImage from "@/components/DestinationImage";
 import StateMap from "@/components/StateMap";
 import { formatDays, seasonBadge, themeEmoji } from "@/lib/format";
 import { sceneSvg } from "@/lib/scene";
+import { pairsWellWith } from "@/lib/suggest";
 
 export function generateStaticParams() {
   return destinations.map((d) => ({ slug: d.slug }));
@@ -37,6 +38,7 @@ export default function DestinationPage({ params }: { params: { slug: string } }
   const nearby = destinations
     .filter((d) => d.slug !== destination.slug && d.stateId === destination.stateId)
     .slice(0, 3);
+  const pairs = pairsWellWith(destination, 3);
 
   return (
     <article>
@@ -269,6 +271,20 @@ export default function DestinationPage({ params }: { params: { slug: string } }
             </div>
           </aside>
         </div>
+
+        {pairs.length > 0 && (
+          <div className="mt-16">
+            <h2 className="font-display text-2xl font-semibold text-navy-800">Pairs well with</h2>
+            <p className="mt-1 text-sm text-navy-500">
+              Close enough to combine, and in season at the same time as {destination.name}.
+            </p>
+            <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {pairs.map((d) => (
+                <DestinationCard key={d.slug} destination={d} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {nearby.length > 0 && (
           <div className="mt-16">
