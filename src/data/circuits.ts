@@ -196,6 +196,8 @@ export const circuits: Circuit[] = [
 export interface CircuitSummary extends Circuit {
   items: Destination[];
   states: string[];
+  /** The theme most of this circuit is about, for artwork and chips. */
+  dominantTheme: Destination["themes"][number];
   /** Catalogue time at the destinations, before travel between them. */
   daysAtDestinations: number;
   /** Months that suit every stop in the circuit. */
@@ -212,9 +214,15 @@ export function circuitSummary(circuit: Circuit): CircuitSummary {
     if (items.length && items.every((d) => d.bestMonths.includes(m))) commonMonths.push(m);
   }
 
+  const counts = new Map<string, number>();
+  items.forEach((d) => d.themes.forEach((t) => counts.set(t, (counts.get(t) ?? 0) + 1)));
+  const dominantTheme = ([...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
+    "Heritage") as Destination["themes"][number];
+
   return {
     ...circuit,
     items,
+    dominantTheme,
     states: [...new Set(items.map((d) => d.stateName))],
     daysAtDestinations: items.reduce((sum, d) => sum + d.idealDays, 0),
     commonMonths,

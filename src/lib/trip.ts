@@ -192,19 +192,31 @@ function buildLeg(from: Destination, to: Destination): TravelLeg {
     };
   }
 
-  // Inside one district, or inside a unit small enough to cross locally,
-  // getting there is already part of the catalogue's time at the destination.
-  if (sameDistrict || (sameState && fromState.compactUnit)) {
+  // City-scale units only: getting across one is already part of the
+  // catalogue's time at the destination.
+  if (sameState && fromState.compactUnit) {
     return {
       fromName: from.name,
       toName: to.name,
       mode: "Walk / local transport",
-      approxKm: sameDistrict ? 25 : 40,
-      approxHours: sameDistrict ? 0.5 : 1,
+      approxKm: 40,
+      approxHours: 1,
       days: 0,
-      note: sameDistrict
-        ? "Same area — no travel day needed, just move between them."
-        : `Both inside ${fromState.name}. Local transport; no travel day needed.`,
+      note: `Both inside ${fromState.name}. Local transport; no travel day needed.`,
+    };
+  }
+
+  // Same district still means a drive. Districts vary enormously — Leh is
+  // larger than several states — so this is a floor, not a promise.
+  if (sameDistrict) {
+    return {
+      fromName: from.name,
+      toName: to.name,
+      mode: "Road",
+      approxKm: 60,
+      approxHours: 2,
+      days: 0.25,
+      note: `Both in ${from.district}. Allow a couple of hours — in a large district like this one it can be most of a day, so check the actual road distance.`,
     };
   }
 

@@ -28,9 +28,12 @@ const MODULES = [
   "src/data/guides/central.ts",
   "src/data/guides/northeast.ts",
   "src/data/guides/index.ts",
+  "src/data/circuits.ts",
   "src/lib/format.ts",
   "src/lib/scene.ts",
   "src/lib/trip.ts",
+  "src/lib/suggest.ts",
+  "src/lib/export.ts",
 ];
 
 /** "src/data/guides/index.ts" -> canonical id "@/data/guides" */
@@ -88,9 +91,12 @@ ${registry}
     states: __req("@/data/states"),
     destinations: __req("@/data/destinations"),
     guides: __req("@/data/guides"),
+    circuits: __req("@/data/circuits"),
     format: __req("@/lib/format"),
     scene: __req("@/lib/scene"),
     trip: __req("@/lib/trip"),
+    suggest: __req("@/lib/suggest"),
+    exportTrip: __req("@/lib/export"),
   };
 })();
 `;

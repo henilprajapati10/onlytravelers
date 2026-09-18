@@ -39,9 +39,7 @@ export default function CircuitList() {
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         {summaries.map((c) => {
           const plan = buildTrip(c.items);
-          const scene = c.items[0]
-            ? sceneSvg(c.id, c.items[0].themes, { width: 640, height: 160 })
-            : "";
+          const scene = sceneSvg(c.id, [c.dominantTheme], { width: 640, height: 160 });
           return (
             <article
               key={c.id}

@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node tests/trip-invariants.mjs",
+    "test:browser": "node tests/browser-features.mjs",
+    "build:demo": "node scripts/build-demo.mjs"
   },
   "dependencies": {
     "next": "14.2.35",

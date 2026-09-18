@@ -5,7 +5,9 @@
   const { guides } = OT.guides;
   const { themeEmoji, formatDays, shortDays, seasonBadge } = OT.format;
   const { sceneSvg } = OT.scene;
-  const { buildTrip, formatMonths, monthName } = OT.trip;
+  const { buildTrip, formatMonths, monthName, monthFull } = OT.trip;
+  const { circuits, circuitSummary } = OT.circuits;
+  const { tripToText, tripToIcs, downloadFile, tripShareUrl } = OT.exportTrip;
 
   const bySlug = (s) => destinations.find((d) => d.slug === s);
   const esc = (s) =>
@@ -512,9 +514,14 @@
     pace: ["#64748b", "Pace"],
   };
 
+  const planner = { month: 0, budget: 0 };
+
   function tripView() {
     const items = cartItems();
-    const trip = buildTrip(items);
+    const trip = buildTrip(items, {
+      travelMonth: planner.month || undefined,
+      daysAvailable: planner.budget || undefined,
+    });
     if (!trip) {
       return `<div class="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6">
         <h1 class="font-display text-3xl font-bold txt">Nothing to build yet</h1>
@@ -524,13 +531,50 @@
     const icon = (m) =>
       m === "Flight" ? "✈️" : m === "Ferry or flight" ? "⛴️" : m === "Road" ? "🚗" : m === "Walk / local transport" ? "🚶" : "🚆";
 
+    const inSeason = trip.stops.filter((s) => !s.outOfSeason).length;
+    const fits = planner.budget
+      ? trip.totalDays <= planner.budget
+        ? `Fits your ${planner.budget} days`
+        : `${formatDays(trip.totalDays - planner.budget)} over`
+      : `This plan needs ${trip.totalDays} days`;
+    const sel = "rounded-lg border bd px-3 py-2 text-sm txt";
+
     return `
     <div class="mx-auto max-w-4xl px-4 py-12 sm:px-6">
-      <h1 class="font-display text-3xl font-bold txt">Your trip</h1>
-      <p class="mt-2 txt-muted">Built from ${trip.stops.length} ${trip.stops.length === 1 ? "destination" : "destinations"} across ${trip.statesCovered.length} ${trip.statesCovered.length === 1 ? "state" : "states"}, with travel between them costed in.</p>
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 class="font-display text-3xl font-bold txt">Your trip</h1>
+          <p class="mt-2 txt-muted">Built from ${trip.stops.length} ${trip.stops.length === 1 ? "destination" : "destinations"} across ${trip.statesCovered.length} ${trip.statesCovered.length === 1 ? "state" : "states"}, with travel between them costed in.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" data-share class="rounded-lg border bd surface px-3 py-2 text-sm font-semibold txt">Share link</button>
+          <button type="button" data-print class="rounded-lg border bd surface px-3 py-2 text-sm font-semibold txt">Print</button>
+          <button type="button" data-export="txt" class="rounded-lg border bd surface px-3 py-2 text-sm font-semibold txt">Text</button>
+          <button type="button" data-export="ics" class="rounded-lg border bd surface px-3 py-2 text-sm font-semibold txt">Calendar</button>
+        </div>
+      </div>
+
+      <div class="mt-6 grid gap-3 rounded-xl border bd surface p-4 shadow-card sm:grid-cols-2">
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="font-semibold txt">When are you going?</span>
+          <select id="p-month" class="${sel}">
+            <option value="0">Not decided yet</option>
+            ${Array.from({ length: 12 }, (_, i) => i + 1).map((m) => `<option value="${m}"${planner.month === m ? " selected" : ""}>${monthFull(m)}</option>`).join("")}
+          </select>
+          <span class="text-xs txt-faint">${planner.month ? `${inSeason} of ${trip.stops.length} stops are in season` : "Pick a month to check every stop against its season"}</span>
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="font-semibold txt">How many days do you have?</span>
+          <select id="p-budget" class="${sel}">
+            <option value="0">However long it takes</option>
+            ${[3, 5, 7, 10, 14, 21, 30].map((d) => `<option value="${d}"${planner.budget === d ? " selected" : ""}>${d} days</option>`).join("")}
+          </select>
+          <span class="text-xs ${fits.includes("over") ? "accent" : "txt-faint"}">${fits}</span>
+        </label>
+      </div>
 
       <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        ${[[trip.totalDays, "days total"], [trip.daysAtDestinations, "days at places"], [trip.travelDays, "days in transit"], [trip.approxKm.toLocaleString("en-IN") + " km", "approx distance"]]
+        ${[[trip.totalDays, "days total"], [shortDays(trip.daysAtDestinations), "at the places"], [shortDays(trip.travelDays), "in transit"], [trip.approxKm.toLocaleString("en-IN") + " km", "approx distance"]]
           .map(([v, l]) => `<div class="rounded-xl border bd surface p-4 text-center shadow-card"><div class="font-display text-2xl font-bold tabular-nums txt">${v}</div><div class="text-xs uppercase tracking-wide txt-faint">${l}</div></div>`)
           .join("")}
       </div>
@@ -588,8 +632,12 @@
                   <h3 class="font-display text-lg font-semibold txt"><a href="#/destinations/${s.destination.slug}">${esc(s.destination.name)}</a></h3>
                   <p class="text-sm txt-faint">${esc(s.destination.district)} · ${esc(s.state.name)}</p>
                 </div>
-                <span class="rounded-full px-3 py-1 text-xs font-semibold tabular-nums text-white" style="background:#0b1b30">Day ${s.startDay}${s.endDay > s.startDay ? "–" + s.endDay : ""}</span>
+                <div class="flex items-center gap-2">
+                  <span class="rounded-full px-3 py-1 text-xs font-semibold tabular-nums text-white" style="background:#0b1b30">Day ${s.startDay}${s.endDay > s.startDay ? "–" + s.endDay : ""}</span>
+                  <button type="button" data-remove="${s.destination.slug}" aria-label="Remove ${esc(s.destination.name)} from the trip" class="rounded-md px-2 py-1 text-sm font-semibold txt-faint">✕</button>
+                </div>
               </div>
+              ${s.outOfSeason ? `<p class="mt-2 rounded-lg px-3 py-2 text-xs font-medium" style="background:rgba(232,73,42,.1);color:#c73820">Out of season in ${monthFull(trip.travelMonth)} — best ${esc(s.destination.bestMonthsLabel)}.</p>` : ""}
               <div class="mt-3 flex flex-wrap gap-1.5">
                 ${s.destination.themes.map((t) => `<span class="rounded-full surface-alt px-2 py-0.5 text-[11px] txt-muted">${themeEmoji[t]} ${t}</span>`).join("")}
                 <span class="rounded-full surface-alt px-2 py-0.5 text-[11px] txt-muted">${formatDays(s.destination.idealDays)} here</span>
@@ -604,14 +652,55 @@
         <summary class="cursor-pointer font-display text-sm font-semibold txt">See all ${trip.totalDays} days as a list</summary>
         <ol class="mt-4 flex flex-col gap-2">
           ${trip.days.map((d) => `<li class="flex gap-3 text-sm"><span class="w-16 shrink-0 font-semibold tabular-nums txt-faint">Day ${d.day}</span>
-            <span><span class="${d.kind === "travel" ? "txt-muted" : "font-medium txt"}">${d.kind === "travel" ? "In transit — " : ""}${esc(d.title)}</span>
-            <span class="block text-xs txt-faint">${esc(d.detail)}</span></span></li>`).join("")}
+            <span class="flex flex-1 flex-col gap-1">${d.entries.map((e) => `<span>
+              <span class="${e.kind === "travel" ? "txt-muted" : "font-medium txt"}">${e.kind === "travel" ? "In transit — " : ""}${esc(e.title)}</span>
+              <span class="ml-2 rounded surface-alt px-1.5 py-0.5 text-[10px] uppercase tracking-wide txt-faint">${esc(e.share)}</span>
+              <span class="block text-xs txt-faint">${esc(e.detail)}</span></span>`).join("")}</span></li>`).join("")}
         </ol>
       </details>
 
       <div class="mt-8 flex flex-wrap gap-3">
         <a href="#/cart" class="rounded-lg border bd surface px-6 py-3 text-sm font-semibold txt">Edit Trip Bag</a>
         <a href="#/destinations" class="rounded-lg bg-accent px-6 py-3 text-sm font-semibold">Add more destinations</a>
+      </div>
+    </div>`;
+  }
+
+  /* ---------- circuits ---------- */
+  function circuitsView() {
+    return `
+    <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <h1 class="font-display text-3xl font-bold txt">Circuits</h1>
+      <p class="mt-2 max-w-2xl txt-muted">Twelve routes that hold together as one trip — grouped by geography and season, not by popularity. Load one into your Trip Bag and change it from there; nothing here is fixed.</p>
+      <div class="mt-8 grid gap-6 lg:grid-cols-2">
+        ${circuits.map(circuitSummary).map((c) => {
+          const plan = buildTrip(c.items);
+          return `<article class="flex flex-col overflow-hidden rounded-2xl border bd surface shadow-card">
+            <div class="relative aspect-[4/1]">
+              ${scene(c.id, [c.dominantTheme], 640, 160, "absolute inset-0 h-full w-full")}
+              <div class="absolute inset-0" style="background:linear-gradient(to top, rgba(8,19,36,.85), transparent)"></div>
+              <div class="absolute inset-x-0 bottom-0 p-4">
+                <h2 class="font-display text-xl font-bold text-white">${esc(c.name)}</h2>
+                <p class="text-sm text-white/80">${esc(c.tagline)}</p>
+              </div>
+            </div>
+            <div class="flex flex-1 flex-col gap-3 p-5">
+              <p class="text-sm txt-muted">${esc(c.rationale)}</p>
+              <dl class="grid grid-cols-3 gap-2 text-center">
+                ${[["Stops", c.items.length], ["Days", plan ? plan.totalDays : "—"], ["States", c.states.length]]
+                  .map(([l, v]) => `<div class="rounded-lg surface-alt p-2"><dt class="text-[10px] uppercase tracking-wide txt-faint">${l}</dt><dd class="font-display font-bold tabular-nums txt">${v}</dd></div>`).join("")}
+              </dl>
+              <p class="text-xs txt-faint">Best months: <span class="font-semibold txt-muted">${c.commonMonths.length ? formatMonths(c.commonMonths) : "varies by stop"}</span>${plan ? ` · ${shortDays(plan.travelDays)} of it in transit` : ""}</p>
+              <ol class="flex flex-wrap gap-1.5">
+                ${c.items.map((d, i) => `<li class="flex items-center gap-1">${i > 0 ? '<span class="txt-faint">→</span>' : ""}<a href="#/destinations/${d.slug}" class="rounded-full surface-alt px-2 py-0.5 text-[11px] font-medium txt-muted">${themeEmoji[d.themes[0]]} ${esc(d.name)}</a></li>`).join("")}
+              </ol>
+              <div class="mt-auto flex flex-wrap gap-2 pt-2">
+                <button type="button" data-circuit="${c.id}" class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold">Use this trip</button>
+                <button type="button" data-circuit-add="${c.id}" class="rounded-lg border bd px-4 py-2 text-sm font-semibold txt">Add to my bag</button>
+              </div>
+            </div>
+          </article>`;
+        }).join("")}
       </div>
     </div>`;
   }
@@ -655,7 +744,8 @@
     if (parts[0] === "destinations") return parts.length > 1 ? { view: "detail", slug: parts[1] } : { view: "destinations", theme: params.get("theme") };
     if (parts[0] === "states") return parts.length > 1 ? { view: "state", id: parts[1] } : { view: "states", zone: params.get("zone") };
     if (parts[0] === "cart") return { view: "cart" };
-    if (parts[0] === "trip") return { view: "trip" };
+    if (parts[0] === "trip") return { view: "trip", bag: params.get("bag") };
+    if (parts[0] === "circuits") return { view: "circuits" };
     if (parts[0] === "campaign") return { view: "campaign" };
     return { view: "home" };
   }
@@ -671,7 +761,17 @@
     else if (r.view === "states") html = statesView(r.zone);
     else if (r.view === "state") html = stateView(r.id);
     else if (r.view === "cart") html = cartView();
-    else if (r.view === "trip") html = tripView();
+    else if (r.view === "trip") {
+      // A shared link carries the bag: #/trip?bag=slug,slug
+      if (r.bag) {
+        const incoming = r.bag.split(",").map((s) => s.trim()).filter((s) => bySlug(s));
+        if (incoming.length) {
+          cart = incoming;
+          save();
+        }
+      }
+      html = tripView();
+    } else if (r.view === "circuits") html = circuitsView();
     else if (r.view === "campaign") html = campaignView();
 
     document.getElementById("app").innerHTML = html;
@@ -696,7 +796,51 @@
       render(false);
       return;
     }
-    if (e.target.closest("[data-more]")) { e.preventDefault(); filters.visible += 24; updateGrid(); }
+    if (e.target.closest("[data-more]")) { e.preventDefault(); filters.visible += 24; updateGrid(); return; }
+
+    const useCircuit = e.target.closest("[data-circuit]");
+    if (useCircuit) {
+      e.preventDefault();
+      const c = circuits.find((x) => x.id === useCircuit.dataset.circuit);
+      if (c) { cart = c.slugs.filter(bySlug); save(); location.hash = "#/trip"; }
+      return;
+    }
+    const addCircuit = e.target.closest("[data-circuit-add]");
+    if (addCircuit) {
+      e.preventDefault();
+      const c = circuits.find((x) => x.id === addCircuit.dataset.circuitAdd);
+      if (c) {
+        c.slugs.filter(bySlug).forEach((s) => { if (!cart.includes(s)) cart.push(s); });
+        save(); badge();
+        addCircuit.textContent = "Added ✓";
+        setTimeout(() => { addCircuit.textContent = "Add to my bag"; }, 1800);
+      }
+      return;
+    }
+
+    const shareBtn = e.target.closest("[data-share]");
+    if (shareBtn) {
+      e.preventDefault();
+      const url = location.origin + location.pathname + "#/trip?bag=" + cart.join(",");
+      const done = () => { shareBtn.textContent = "Link copied ✓"; setTimeout(() => { shareBtn.textContent = "Share link"; }, 2000); };
+      if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, () => window.prompt("Copy your trip link:", url));
+      else window.prompt("Copy your trip link:", url);
+      return;
+    }
+    if (e.target.closest("[data-print]")) { e.preventDefault(); window.print(); return; }
+    const exp = e.target.closest("[data-export]");
+    if (exp) {
+      e.preventDefault();
+      const trip = buildTrip(cartItems(), { travelMonth: planner.month || undefined, daysAvailable: planner.budget || undefined });
+      if (!trip) return;
+      if (exp.dataset.export === "txt") {
+        downloadFile("onlytravelers-itinerary.txt", tripToText(trip), "text/plain");
+      } else {
+        const start = new Date();
+        start.setDate(start.getDate() + 30);
+        downloadFile("onlytravelers-itinerary.ics", tripToIcs(trip, start), "text/calendar");
+      }
+    }
   });
 
   document.addEventListener("input", (e) => {
@@ -705,6 +849,8 @@
 
   document.addEventListener("change", (e) => {
     const id = e.target.id;
+    if (id === "p-month") { planner.month = Number(e.target.value); render(false); return; }
+    if (id === "p-budget") { planner.budget = Number(e.target.value); render(false); return; }
     if (id === "f-zone") { filters.zone = e.target.value; filters.state = "All"; filters.visible = 24; render(false); return; }
     if (id === "f-state") filters.state = e.target.value;
     else if (id === "f-theme") filters.theme = e.target.value;
