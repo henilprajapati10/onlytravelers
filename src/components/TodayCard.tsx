@@ -6,6 +6,7 @@ import type { TripPlan } from "@/lib/trip";
 import { todayFor, formatTripDate } from "@/lib/today";
 import { NATIONAL_NUMBERS, essentialsFor } from "@/data/essentials";
 import { countLabel, themeEmoji } from "@/lib/format";
+import DayShapeCard from "./DayShapeCard";
 
 const LEG_ICON: Record<string, string> = {
   Flight: "✈️",
@@ -133,6 +134,11 @@ export default function TodayCard({
       </div>
 
       <div className="flex flex-col gap-4 p-5">
+        {/* On a day at a place, the useful thing is how to spend it. */}
+        {here && !state.todayLeg && !compact && (
+          <DayShapeCard destination={here.destination} month={trip.travelMonth} compact />
+        )}
+
         {here && !state.todayLeg && (
           <div className="flex flex-wrap gap-1.5">
             {here.destination.themes.map((t) => (

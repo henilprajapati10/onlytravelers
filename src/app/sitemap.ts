@@ -4,7 +4,7 @@ import { states } from "@/data/states";
 import { siteUrl } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const staticPages = ["", "/destinations", "/states", "/circuits", "/campaign", "/image-rights"].map(
+  const staticPages = ["", "/destinations", "/states", "/circuits", "/festivals", "/start", "/campaign", "/image-rights"].map(
     (path) => ({
       url: `${siteUrl}${path}`,
       changeFrequency: "monthly" as const,

@@ -64,19 +64,20 @@
         <span class="font-display text-xl font-semibold lowercase leading-none"><span class="txt">only</span><span class="accent">travelers</span></span>
       </a>
 
-      <nav class="order-3 flex w-full items-center gap-5 text-sm font-medium md:order-none md:w-auto md:gap-6">
-        <a href="#/destinations" class="nav-link txt-muted" data-route="destinations">Destinations</a>
-        <a href="#/states" class="nav-link txt-muted" data-route="states">States</a>
-        <a href="#/circuits" class="nav-link txt-muted" data-route="circuits">Circuits</a>
-        <a href="#/trips" class="nav-link txt-muted" data-route="trips">My Trips</a>
-        <a href="#/profile" class="nav-link txt-muted" data-route="profile">You</a>
+      <nav class="order-3 flex w-full items-center gap-5 overflow-x-auto text-sm font-medium md:order-none md:w-auto md:gap-6 md:overflow-x-visible">
+        <a href="#/destinations" class="nav-link shrink-0 txt-muted" data-route="destinations">Destinations</a>
+        <a href="#/states" class="nav-link shrink-0 txt-muted" data-route="states">States</a>
+        <a href="#/circuits" class="nav-link shrink-0 txt-muted" data-route="circuits">Circuits</a>
+        <a href="#/festivals" class="nav-link shrink-0 txt-muted" data-route="festivals">Festivals</a>
+        <a href="#/trips" class="nav-link shrink-0 txt-muted" data-route="trips">My Trips</a>
+        <a href="#/profile" class="nav-link shrink-0 txt-muted" data-route="profile">You</a>
       </nav>
 
       <button type="button" id="search-open" aria-label="Search destinations, states and circuits" class="inline-flex shrink-0 items-center gap-2 rounded-full border bd surface px-3 py-1.5 text-sm txt-muted shadow-sm">
         <span aria-hidden="true">🔎</span><span class="hidden lg:inline">Search</span><kbd class="hidden rounded border bd px-1 text-[10px] font-semibold txt-faint lg:inline">/</kbd>
       </button>
 
-      <a href="#/trips" class="relative inline-flex shrink-0 items-center gap-2 rounded-full border bd surface px-3 py-1.5 text-sm font-semibold shadow-sm">
+      <a href="#/trips" id="bag-link" class="relative inline-flex shrink-0 items-center gap-2 rounded-full border bd surface px-3 py-1.5 text-sm font-semibold shadow-sm">
         <span aria-hidden="true">🎒</span><span id="bag-label" class="hidden max-w-[10rem] truncate sm:inline">Trip Bag</span>
         <span id="cart-badge" hidden class="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold">0</span>
       </a>

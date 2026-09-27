@@ -17,9 +17,10 @@ const MODULES = [
   "src/data/guides/north.ts", "src/data/guides/west.ts", "src/data/guides/south.ts",
   "src/data/guides/east.ts", "src/data/guides/central.ts", "src/data/guides/northeast.ts",
   "src/data/guides/index.ts", "src/data/circuits.ts", "src/data/renown.ts",
-  "src/data/essentials.ts", "src/data/trips.ts",
+  "src/data/essentials.ts", "src/data/trips.ts", "src/data/festivals.ts",
   "src/lib/format.ts", "src/lib/scene.ts", "src/lib/trip.ts",
   "src/lib/starter.ts", "src/lib/today.ts", "src/lib/search.ts",
+  "src/lib/alternatives.ts", "src/lib/responsible.ts", "src/lib/dayshape.ts",
   "src/lib/storage.ts", "src/lib/wallet.ts", "src/lib/export.ts",
 ];
 
@@ -61,6 +62,10 @@ const St = __req("@/lib/starter");
 const Td = __req("@/lib/today");
 const Se = __req("@/lib/search");
 const Ex = __req("@/lib/export");
+const Fe = __req("@/data/festivals");
+const Al = __req("@/lib/alternatives");
+const Re = __req("@/lib/responsible");
+const Ds = __req("@/lib/dayshape");
 
 let pass = 0, fail = 0;
 const ok = (label, cond, extra = "") => {
@@ -232,6 +237,182 @@ for (const d of D.destinations) {
   if (costLike.test(blob)) { priced++; console.log(`   priced: ${d.slug}`); }
 }
 ok("no destination guide quotes a price", priced === 0, `${priced} found`);
+
+/* ---------- festivals: every reference resolves, no invented precision ---------- */
+{
+  const slugSet = new Set(D.destinations.map((d) => d.slug));
+  const stateSet = new Set(S.states.map((s) => s.id));
+  let bad = 0;
+  for (const f of Fe.festivals) {
+    if (!stateSet.has(f.stateId)) { bad++; console.log(`   unknown state: ${f.id} -> ${f.stateId}`); }
+    if (!f.months.length || f.months.some((m) => m < 1 || m > 12)) { bad++; console.log(`   bad months: ${f.id}`); }
+    for (const slug of f.slugs) {
+      if (!slugSet.has(slug)) { bad++; console.log(`   unknown slug: ${f.id} -> ${slug}`); continue; }
+      const d = D.destinations.find((x) => x.slug === slug);
+      if (d.stateId !== f.stateId) { bad++; console.log(`   state mismatch: ${f.id} ${slug}`); }
+    }
+  }
+  ok("every festival resolves to a real state and destination", bad === 0, `${bad} bad`);
+
+  const ids = Fe.festivals.map((f) => f.id);
+  ok("festival ids are unique", new Set(ids).size === ids.length);
+
+  const monthsCovered = Array.from({ length: 12 }, (_, i) => Fe.festivalsInMonth(i + 1).length);
+  ok("every month has something on", monthsCovered.every((n) => n > 0), monthsCovered.join(","));
+
+  // A moving lunar date must not be presented as fixed.
+  const lunar = Fe.festivals.filter((f) => /lunar|moves|Purnima|calendar|announced/i.test(f.whenLabel));
+  const lying = lunar.filter((f) => f.fixedDates);
+  ok("no lunar festival is marked as a fixed date", lying.length === 0, lying.map((f) => f.id).join(", "));
+
+  // The whole feature is about impact, not trivia.
+  ok("every festival says what it does to a trip", Fe.festivals.every((f) => f.impact.length > 40));
+  ok("no festival quotes a price", !Fe.festivals.some((f) => costLike.test(`${f.what} ${f.impact}`)));
+
+  const trip = Fe.festivalsForTrip(["nagaland"], ["hornbill-festival-kisama"], 12);
+  ok("December in Nagaland surfaces Hornbill", trip.some((f) => f.id === "hornbill"));
+  ok("a month with no match at that state returns nothing",
+     Fe.festivalsForTrip(["goa"], [], 6).length === 0);
+}
+
+/* ---------- swaps: never nonsense, never silent ---------- */
+{
+  const bad = [];
+  let suggestions = 0;
+  const combos = [
+    [["manali-solang-valley", "shimla"], 7],
+    [["baga-calangute-anjuna", "palolem-agonda"], 7],
+    [["taj-mahal-agra", "jaipur-amber-fort-hawa-mahal-city-palace", "radhanagar-beach-havelock"], 11],
+    [["alleppey-backwaters", "munnar", "fort-kochi-mattancherry"], 11],
+    [["kaziranga-national-park-unesco", "cherrapunji-sohra", "tawang-monastery"], 3],
+    [["leh-shanti-stupa-leh-palace", "pangong-tso"], 1],
+    [["hampi-unesco", "gokarna", "mysuru-palace-chamundi-hill"], 8],
+  ];
+  for (const [slugs, month] of combos) {
+    const items = slugs.map((s) => D.destinations.find((d) => d.slug === s)).filter(Boolean);
+    const plan = T.buildTrip(items, { travelMonth: month });
+    const rep = Al.swapReport(plan);
+    suggestions += rep.swaps.length;
+    for (const sw of rep.swaps) {
+      // A swap must be a genuinely different place, reachable from the route.
+      if (sw.to.slug === sw.from.slug) bad.push(`self-swap ${sw.from.slug}`);
+      if (sw.to.stateId === sw.from.stateId && sw.to.district === sw.from.district)
+        bad.push(`same district: ${sw.from.name} -> ${sw.to.name}`);
+      if (sw.to.zone !== sw.from.zone) bad.push(`cross-zone: ${sw.from.name} -> ${sw.to.name}`);
+      if (!sw.to.themes.some((t) => sw.from.themes.includes(t)))
+        bad.push(`no shared theme: ${sw.from.name} -> ${sw.to.name}`);
+      if (slugs.includes(sw.to.slug)) bad.push(`already in trip: ${sw.to.name}`);
+      // An out-of-season swap that is itself out of season is worse than none.
+      if (sw.reason === "out-of-season" && !sw.to.bestMonths.includes(month))
+        bad.push(`replacement out of season: ${sw.to.name}`);
+      if (!sw.why || !sw.gain) bad.push(`unexplained swap: ${sw.from.name}`);
+    }
+    // Duplicate targets would offer the same place twice in one trip.
+    const targets = rep.swaps.map((x) => x.to.slug);
+    if (new Set(targets).size !== targets.length) bad.push(`duplicate target in ${slugs[0]}`);
+  }
+  bad.forEach((b) => console.log("   " + b));
+  ok("every swap is a real, reachable, in-season alternative", bad.length === 0, `${bad.length} bad`);
+  ok("swaps are actually offered", suggestions > 0, `${suggestions} across ${combos.length} trips`);
+
+  // Goa in July genuinely has no replacement — saying nothing would read as approval.
+  const goa = T.buildTrip(
+    ["baga-calangute-anjuna", "palolem-agonda"].map((s) => D.destinations.find((d) => d.slug === s)),
+    { travelMonth: 7 }
+  );
+  const goaRep = Al.swapReport(goa);
+  ok("an unfixable month is said out loud, not skipped", goaRep.stranded.length > 0,
+     `${goaRep.stranded.length} stranded`);
+
+  // A trip that fits should not be nagged.
+  const good = T.buildTrip(
+    ["kumarakom", "vagamon"].map((s) => D.destinations.find((d) => d.slug === s)),
+    { travelMonth: 12 }
+  );
+  const goodRep = Al.swapReport(good);
+  ok("a well-fitting trip is left alone", goodRep.stranded.length === 0);
+}
+
+/* ---------- responsible travel: derived, never generic ---------- */
+{
+  const andaman = T.buildTrip(
+    ["radhanagar-beach-havelock", "baratang-limestone-caves"].map((s) => D.destinations.find((d) => d.slug === s))
+  );
+  const aNotes = Re.buildResponsibleNotes(andaman);
+  ok("the Andamans trigger the Jarawa rule", aNotes.some((n) => n.id === "jarawa" && n.kind === "law"));
+  ok("the Andamans trigger the coral rule", aNotes.some((n) => n.id === "coral"));
+
+  const raj = T.buildTrip(
+    ["jaisalmer-sam-sand-dunes", "jodhpur-mehrangarh-fort"].map((s) => D.destinations.find((d) => d.slug === s))
+  );
+  const rNotes = Re.buildResponsibleNotes(raj);
+  ok("a desert trip is not lectured about coral", !rNotes.some((n) => n.id === "coral"));
+  ok("a desert trip gets the water rule", rNotes.some((n) => n.id === "water"));
+  ok("the living fort is flagged", rNotes.some((n) => n.id === "strain"));
+
+  const ne = T.buildTrip(
+    ["mon-konyak-villages", "khonoma-green-village"].map((s) => D.destinations.find((d) => d.slug === s))
+  );
+  const nNotes = Re.buildResponsibleNotes(ne);
+  ok("tribal regions get the consent rule", nNotes.some((n) => n.id === "consent"));
+
+  // Every note must justify itself or be universal by design.
+  const UNIVERSAL = new Set(["money-local", "fair-pay"]);
+  let unjustified = 0;
+  for (const plan of [andaman, raj, ne]) {
+    for (const n of Re.buildResponsibleNotes(plan)) {
+      if (!UNIVERSAL.has(n.id) && n.because.length === 0) { unjustified++; console.log(`   unjustified: ${n.id}`); }
+    }
+  }
+  ok("every note names the stops that caused it", unjustified === 0, `${unjustified} unjustified`);
+  ok("enforced rules are grouped first",
+     Re.groupResponsible(aNotes)[0].kind === "law");
+  ok("responsible notes quote no price",
+     !Re.buildResponsibleNotes(raj).some((n) => costLike.test(n.detail)));
+}
+
+/* ---------- day shape ---------- */
+{
+  let bad = 0;
+  for (const d of D.destinations) {
+    const shape = Ds.shapeForDestination(d, 11);
+    if (shape.slots.length !== 3) { bad++; continue; }
+    if (shape.slots.map((s) => s.part).join(",") !== "Early,Midday,Evening") bad++;
+    if (shape.slots.some((s) => !s.what || s.what.length < 20)) bad++;
+  }
+  ok("every destination has a three-part day", bad === 0, `${bad} bad`);
+
+  const taj = D.destinations.find((d) => d.slug === "taj-mahal-agra");
+  ok("the day shape carries the guide's own advice",
+     Ds.shapeForDestination(taj, 11).localAdvice === __req("@/data/guides").guides["taj-mahal-agra"].tip);
+
+  // Most guide tips are not about timing at all ("bring a book", "hire the
+  // official guide"), and forcing those into a slot would be the bug. What
+  // matters is that advice which DOES name a time lands in the right part.
+  const guidesAll = __req("@/data/guides").guides;
+  const clockish = /\b(dawn|sunrise|sunset|dusk|morning|evening|afternoon|midday|noon|overnight|after dark|first light|\d{1,2}\s?[ap]m)\b/i;
+  const timed = D.destinations.filter((d) => clockish.test(guidesAll[d.slug]?.tip ?? ""));
+  const misplaced = timed.filter((d) => !Ds.shapeForDestination(d, 11).adviceIn);
+  misplaced.slice(0, 5).forEach((d) => console.log(`   unplaced: ${d.slug} — ${guidesAll[d.slug].tip.slice(0, 80)}`));
+  ok("advice that names a time is placed in that part of the day",
+     misplaced.length === 0, `${timed.length} timed, ${misplaced.length} unplaced`);
+
+  // And advice with no time reference is still shown, just not slotted.
+  const untimed = D.destinations.find((d) => !clockish.test(guidesAll[d.slug]?.tip ?? ""));
+  ok("untimed advice is still carried, just not slotted",
+     Boolean(Ds.shapeForDestination(untimed, 11).localAdvice));
+
+  ok("May in Rajasthan warns about the heat",
+     Boolean(Ds.shapeForDestination(D.destinations.find((d) => d.slug === "jaisalmer-sam-sand-dunes"), 5).heatWarning));
+  ok("May in Ladakh does not",
+     !Ds.shapeForDestination(D.destinations.find((d) => d.slug === "pangong-tso"), 5).heatWarning);
+  ok("no day shape quotes a price",
+     !D.destinations.some((d) => costLike.test(Ds.shapeForDestination(d, 11).slots.map((x) => x.what).join(" "))));
+}
+
+/* ---------- search reaches the new layer ---------- */
+ok("search finds a festival", Se.search("hornbill").some((r) => r.kind === "festival"));
+ok("search finds the festival calendar", Se.search("festival calendar").some((r) => r.kind === "action"));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

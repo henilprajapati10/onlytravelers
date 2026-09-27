@@ -10,6 +10,8 @@ import { useTrips } from "@/context/TripsContext";
 import { startTrip, type StarterResult } from "@/lib/starter";
 import { monthFull, monthName, formatMonths } from "@/lib/trip";
 import { shortDays, themeEmoji } from "@/lib/format";
+import { festivalsForTrip } from "@/data/festivals";
+import FestivalList from "./FestivalList";
 import { sceneSvg } from "@/lib/scene";
 
 const DAY_CHOICES = [3, 5, 7, 10, 14, 21];
@@ -227,6 +229,25 @@ export default function TripStarter() {
                 {shortDays(result.plan.travelDays)} in transit ·{" "}
                 {result.plan.approxKm.toLocaleString("en-IN")} km
               </p>
+
+              {(() => {
+                const onNow = festivalsForTrip(
+                  result.plan.stops.map((s) => s.destination.stateId),
+                  result.slugs,
+                  month
+                ).slice(0, 2);
+                if (!onNow.length) return null;
+                return (
+                  <div className="mt-5">
+                    <h3 className="font-display text-xs font-semibold uppercase tracking-wide text-navy-500">
+                      On while you are there
+                    </h3>
+                    <div className="mt-2">
+                      <FestivalList festivals={onNow} />
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="mt-5 flex flex-wrap gap-2">
                 <button

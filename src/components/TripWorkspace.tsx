@@ -27,14 +27,21 @@ import { STORAGE_KEYS, readJson, writeJson } from "@/lib/storage";
 import { loadWallet, saveWalletEntry, walletSummary, type WalletEntry } from "@/lib/wallet";
 import { mailtoUrl, tripEnquiry, whatsappUrl } from "@/lib/export";
 import { todayFor } from "@/lib/today";
+import { swapReport } from "@/lib/alternatives";
+import { buildResponsibleNotes } from "@/lib/responsible";
+import { festivalsForTrip } from "@/data/festivals";
+import SwapList from "./SwapList";
+import ResponsibleList from "./ResponsibleList";
+import FestivalList from "./FestivalList";
 import TripItinerary from "./TripItinerary";
 import TodayCard from "./TodayCard";
 
-type Tab = "today" | "itinerary" | "prep" | "bookings" | "spend";
+type Tab = "today" | "itinerary" | "respect" | "prep" | "bookings" | "spend";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "today", label: "Today", icon: "📍" },
   { id: "itinerary", label: "Itinerary", icon: "🗓️" },
+  { id: "respect", label: "Respect", icon: "🤝" },
   { id: "prep", label: "Prep", icon: "✅" },
   { id: "bookings", label: "Bookings", icon: "🎫" },
   { id: "spend", label: "Spend", icon: "💸" },
@@ -110,6 +117,20 @@ export default function TripWorkspace() {
       router.replace(`/trips/${trip.id}?tab=today`, { scroll: false });
     }
   }, [isHydrated, tabParam, trip, plan, router]);
+
+  const swaps = useMemo(() => (plan ? swapReport(plan) : { swaps: [], stranded: [] }), [plan]);
+  const responsible = useMemo(() => (plan ? buildResponsibleNotes(plan) : []), [plan]);
+  const whatsOn = useMemo(
+    () =>
+      plan
+        ? festivalsForTrip(
+            plan.stops.map((s) => s.destination.stateId),
+            plan.stops.map((s) => s.destination.slug),
+            trip?.travelMonth
+          )
+        : [],
+    [plan, trip?.travelMonth]
+  );
 
   const prep = useMemo(() => (plan ? buildPrepList(plan, profile) : []), [plan, profile]);
   const bookings = useMemo(
@@ -274,14 +295,59 @@ export default function TripWorkspace() {
           {tab === "today" && plan && <TodayCard trip={trip} plan={plan} />}
 
           {tab === "itinerary" && plan && (
-            <TripItinerary
-              plan={plan}
-              tripId={trip.id}
-              travelMonth={trip.travelMonth ?? 0}
-              daysAvailable={trip.daysAvailable ?? 0}
-              startDate={trip.startDate ?? ""}
-              onChange={(patch) => updateTrip(trip.id, patch)}
-            />
+            <div className="flex flex-col gap-8">
+              <TripItinerary
+                plan={plan}
+                tripId={trip.id}
+                travelMonth={trip.travelMonth ?? 0}
+                daysAvailable={trip.daysAvailable ?? 0}
+                startDate={trip.startDate ?? ""}
+                onChange={(patch) => updateTrip(trip.id, patch)}
+              />
+
+              <SwapList
+                report={swaps}
+                onSwap={(fromSlug, toSlug) =>
+                  updateTrip(trip.id, {
+                    slugs: trip.slugs.map((s) => (s === fromSlug ? toSlug : s)),
+                  })
+                }
+              />
+
+              {whatsOn.length > 0 && (
+                <section>
+                  <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy-500">
+                    {trip.travelMonth
+                      ? `What is on while you are there`
+                      : `What is on where you are going`}
+                  </h2>
+                  <p className="mb-3 mt-1 text-sm text-navy-500">
+                    {trip.travelMonth
+                      ? "Festivals that fall in your travel month, on your route."
+                      : "Pick a travel month above and this narrows to what you would actually walk into."}
+                  </p>
+                  <FestivalList festivals={whatsOn.slice(0, 6)} showState />
+                </section>
+              )}
+            </div>
+          )}
+
+          {/* ---------- Respect ---------- */}
+          {tab === "respect" && plan && (
+            <div>
+              <div className="rounded-xl border border-navy-100 bg-white p-4 shadow-card">
+                <h2 className="font-display font-semibold text-navy-800">
+                  What this trip asks of you
+                </h2>
+                <p className="mt-1 text-sm text-navy-500">
+                  Be travelers, not tourists — applied to these stops rather than printed on a
+                  poster. Everything below is here because of somewhere you are actually going.
+                </p>
+              </div>
+              <div className="mt-6">
+                <ResponsibleList notes={responsible} />
+              </div>
+            </div>
           )}
 
           {/* ---------- Prep ---------- */}

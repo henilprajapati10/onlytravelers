@@ -12,6 +12,10 @@
   const { startTrip } = OT.starter;
   const { todayFor, formatTripDate } = OT.today;
   const { essentialsFor, NATIONAL_NUMBERS } = OT.essentials;
+  const { festivals, festivalsInMonth, festivalsForSlug, festivalsForTrip, SCALE_LABEL } = OT.festivals;
+  const { swapReport, swapReasonLabel } = OT.alternatives;
+  const { buildResponsibleNotes, groupResponsible } = OT.responsible;
+  const { shapeForDestination } = OT.dayshape;
 
   const bySlug = (s) => destinations.find((d) => d.slug === s);
   const esc = (s) =>
@@ -135,11 +139,15 @@
     const trip = activeTrip();
     const label = document.getElementById("bag-label");
     if (label) label.textContent = trip ? trip.name : "Trip Bag";
+    // The chip names the active trip, so it should open that trip rather
+    // than dropping you on the hub to find it again.
+    const chip = document.getElementById("bag-link");
+    if (chip) chip.setAttribute("href", trip ? `#/trips/${trip.id}` : "#/trips");
   }
 
   const TAB_MATCH = {
     home: (v) => v === "home",
-    explore: (v) => ["destinations", "detail", "states", "state", "circuits"].indexOf(v) !== -1,
+    explore: (v) => ["destinations", "detail", "states", "state", "circuits", "festivals"].indexOf(v) !== -1,
     trips: (v) => ["trips", "workspace", "trip", "cart"].indexOf(v) !== -1,
     profile: (v) => v === "profile",
     search: () => false,
@@ -457,6 +465,15 @@
                 <p class="mt-2 txt">${esc(g.tip)}</p>
               </div>` : ""}
 
+            <h3 class="mt-10 font-display text-lg font-semibold txt">How a day here works</h3>
+            <p class="mb-3 mt-1 text-sm txt-muted">Most of India rewards an early start and a real break in the middle. This is the rhythm this place in particular repays.</p>
+            ${dayShapeCard(d, 0, true, false)}
+
+            ${festivalsForSlug(d.slug).length ? `
+              <h3 class="mt-10 font-display text-lg font-semibold txt">${festivalsForSlug(d.slug).length === 1 ? "The festival here" : "Festivals here"}</h3>
+              <p class="mb-3 mt-1 text-sm txt-muted">Worth timing a trip around — or deliberately avoiding, if you came for the place rather than the crowd.</p>
+              ${festivalList(festivalsForSlug(d.slug))}` : ""}
+
             <h3 class="mt-10 font-display text-lg font-semibold txt">How to reach</h3>
             <dl class="mt-3 grid gap-3 sm:grid-cols-2">
               ${[["Nearest airports", st.airports.join(" · ")], ["Railhead", st.railhead], ["Where to base", `${d.district}, or ${st.capital} for connections`], ["State peak season", st.peakSeason]]
@@ -691,7 +708,18 @@
     // below is looking at the same stops.
     planner.month = trip.travelMonth || 0;
     planner.budget = trip.daysAvailable || 0;
-    return tripView(true);
+    const onNow = festivalsForTrip(
+      plan.stops.map((s) => s.destination.stateId),
+      plan.stops.map((s) => s.destination.slug),
+      trip.travelMonth
+    ).slice(0, 6);
+    return `${tripView(true)}
+      <div class="mt-8">${swapSection(swapReport(plan))}</div>
+      ${onNow.length ? `<section class="mt-8">
+        <h2 class="font-display text-sm font-semibold uppercase tracking-wide txt-faint">${trip.travelMonth ? "What is on while you are there" : "What is on where you are going"}</h2>
+        <p class="mb-3 mt-1 text-sm txt-muted">${trip.travelMonth ? "Festivals that fall in your travel month, on your route." : "Pick a travel month above and this narrows to what you would actually walk into."}</p>
+        ${festivalList(onNow, true)}
+      </section>` : ""}`;
   }
 
   function tripView(embedded) {
@@ -945,6 +973,7 @@
   const WORK_TABS = [
     { id: "today", label: "Today", icon: "📍" },
     { id: "itinerary", label: "Itinerary", icon: "🗓️" },
+    { id: "respect", label: "Respect", icon: "🤝" },
     { id: "prep", label: "Prep", icon: "✅" },
     { id: "bookings", label: "Bookings", icon: "🎫" },
     { id: "spend", label: "Spend", icon: "💸" },
@@ -1014,6 +1043,7 @@
 
     let body = "";
     if (tab === "today") body = todayBody(trip, plan);
+    else if (tab === "respect") body = respectBody(trip, plan);
     else if (tab === "itinerary") body = tripBody(trip, plan);
     else if (tab === "prep") body = prepBody(trip, prepItems, ticked);
     else if (tab === "bookings") body = bookingsBody(trip, bookingTasks);
@@ -1051,6 +1081,7 @@
 
     const cur = state.current;
     const ess = cur ? essentialsFor(cur.state.id) : null;
+    const shape = cur && !state.todayLeg ? dayShapeCard(cur.destination, trip.travelMonth, true) : "";
     return `
       <div class="rounded-2xl border bd surface p-5 shadow-card">
         <p class="text-xs font-semibold uppercase tracking-wide accent">Day ${state.dayNumber} of ${plan.totalDays}</p>
@@ -1061,8 +1092,9 @@
             ? `<h2 class="font-display mt-1 text-xl font-semibold txt">${esc(cur.destination.name)}</h2>
                <p class="mt-1 text-sm txt-muted">${esc(cur.destination.district)}, ${esc(cur.state.name)} · ${esc(cur.destination.rawTheme)}</p>`
             : ""}
-        ${cur && guides[cur.destination.slug] ? `<p class="mt-3 text-sm txt-muted">${esc(guides[cur.destination.slug].tip)}</p>` : ""}
       </div>
+
+      ${shape ? `<div class="mt-4">${shape}</div>` : ""}
 
       ${state.nextLeg && state.lastDayHere
         ? `<div class="mt-4 rounded-xl border bd surface p-4">
@@ -1086,6 +1118,110 @@
         </dl>
         <p class="mt-3 text-xs txt-faint">${NATIONAL_NUMBERS.map((n) => `${esc(n.label)} ${esc(n.number)}`).join(" · ")}</p>
       </div>` : ""}`;
+  }
+
+  /* ---------- festivals, swaps, respect and the shape of a day ---------- */
+  const SCALE_TONE = {
+    international: 'style="background:rgba(232,73,42,.15);color:#c73820"',
+    major: 'style="background:rgba(11,27,48,.10)"',
+    local: 'style="background:rgba(16,185,129,.15);color:#047857"',
+  };
+
+  function festivalList(list, showState) {
+    if (!list.length) return "";
+    return `<ul class="flex flex-col gap-3">${list.map((f) => `
+      <li class="rounded-xl border bd surface p-4 shadow-card">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" ${SCALE_TONE[f.scale] || ""}>${esc(SCALE_LABEL[f.scale])}</span>
+          <span class="rounded-full surface-alt px-2 py-0.5 text-[11px] font-medium txt-muted">${esc(formatMonths(f.months))}</span>
+          ${f.fixedDates ? "" : '<span class="rounded-full px-2 py-0.5 text-[11px] font-medium" style="background:rgba(245,158,11,.15);color:#92400e">Date moves yearly</span>'}
+        </div>
+        <h3 class="font-display mt-2 font-semibold txt">${esc(f.name)}</h3>
+        <p class="text-xs txt-faint">${esc(f.whenLabel)}${showState && f.slugs.length ? ` · <a href="#/destinations/${f.slugs[0]}" class="font-semibold accent">see the destination</a>` : ""}</p>
+        <p class="mt-2 text-sm txt-muted">${esc(f.what)}</p>
+        <p class="mt-2 rounded-lg surface-alt p-3 text-xs txt-muted"><span class="font-semibold txt">What it does to your trip: </span>${esc(f.impact)}</p>
+      </li>`).join("")}</ul>`;
+  }
+
+  const PART_ICON = { Early: "🌅", Midday: "☀️", Evening: "🌇" };
+  const PART_TIME = { Early: "before 9am", Midday: "11am – 4pm", Evening: "after 5pm" };
+
+  function dayShapeCard(destination, month, compact, showAdvice) {
+    if (showAdvice === undefined) showAdvice = true;
+    const shape = shapeForDestination(destination, month || undefined);
+    return `<div class="rounded-xl border bd surface p-4 shadow-card">
+      ${compact ? "" : '<h3 class="font-display text-sm font-semibold uppercase tracking-wide txt-faint">How a day here works</h3>'}
+      ${shape.heatWarning ? `<p class="mt-2 rounded-lg border-l-4 p-3 text-xs txt" style="border-color:#e8492a;background:rgba(232,73,42,.09)">${esc(shape.heatWarning)}</p>` : ""}
+      <ul class="mt-3 flex flex-col gap-3">
+        ${shape.slots.map((slot) => `<li class="flex gap-3">
+          <span class="text-lg leading-none" aria-hidden="true">${PART_ICON[slot.part]}</span>
+          <div class="min-w-0">
+            <p class="text-xs font-semibold uppercase tracking-wide txt-faint">${slot.part} <span class="font-normal" style="text-transform:none">· ${PART_TIME[slot.part]}</span></p>
+            <p class="mt-0.5 text-sm txt-muted">${esc(slot.what)}</p>
+            ${showAdvice && shape.adviceIn === slot.part && shape.localAdvice ? `<p class="mt-1.5 rounded-lg surface-alt p-2.5 text-xs txt"><span class="font-semibold">Here specifically: </span>${esc(shape.localAdvice)}</p>` : ""}
+          </div></li>`).join("")}
+      </ul>
+      ${showAdvice && shape.localAdvice && !shape.adviceIn ? `<p class="mt-3 rounded-lg surface-alt p-3 text-xs txt"><span class="font-semibold">Here specifically: </span>${esc(shape.localAdvice)}</p>` : ""}
+    </div>`;
+  }
+
+  const SWAP_TONE = {
+    "out-of-season": 'style="background:rgba(232,73,42,.15);color:#c73820"',
+    permit: 'style="background:rgba(245,158,11,.18);color:#92400e"',
+    detour: 'style="background:rgba(11,27,48,.10)"',
+    "quieter-twin": 'style="background:rgba(16,185,129,.15);color:#047857"',
+  };
+
+  function swapSection(report) {
+    if (!report.swaps.length && !report.stranded.length) return "";
+    return `<section class="flex flex-col gap-3">
+      <div>
+        <h2 class="font-display text-sm font-semibold uppercase tracking-wide txt-faint">Would this trip be better with a change?</h2>
+        <p class="mt-1 text-sm txt-muted">Nothing here happens automatically — each one says what is wrong and what you would get instead.</p>
+      </div>
+      ${report.swaps.map((sw) => `<div class="rounded-xl border bd surface p-4 shadow-card">
+        <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" ${SWAP_TONE[sw.reason] || ""}>${esc(swapReasonLabel(sw.reason))}</span>
+        <p class="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold txt">
+          <a href="#/destinations/${sw.from.slug}" class="line-through">${esc(sw.from.name)}</a>
+          <span aria-hidden="true" class="accent">→</span>
+          <a href="#/destinations/${sw.to.slug}" class="accent">${esc(sw.to.name)}</a>
+        </p>
+        <p class="mt-2 text-sm txt-muted">${esc(sw.why)}</p>
+        <p class="mt-1 text-sm txt-muted">${esc(sw.gain)}</p>
+        <button type="button" data-swap-from="${sw.from.slug}" data-swap-to="${sw.to.slug}" class="mt-3 rounded-lg border bd px-4 py-2 text-xs font-semibold txt">Make the swap</button>
+      </div>`).join("")}
+      ${report.stranded.map((st) => `<div class="rounded-xl border-l-4 p-4" style="border-color:#e8492a;background:rgba(232,73,42,.09)">
+        <h3 class="font-display text-sm font-semibold txt">${esc(st.destination.name)} does not fit these dates, and we have nothing better</h3>
+        <p class="mt-1 text-sm txt-muted">${esc(st.why)}</p>
+      </div>`).join("")}
+    </section>`;
+  }
+
+  const NOTE_TONE = {
+    law: "border-color:#e8492a;background:rgba(232,73,42,.09)",
+    fragile: "border-color:#0ea5e9;background:rgba(14,165,233,.10)",
+    respect: "border-color:#f59e0b;background:rgba(245,158,11,.12)",
+    money: "border-color:#10b981;background:rgba(16,185,129,.10)",
+  };
+
+  function respectBody(trip, plan) {
+    const groups = groupResponsible(buildResponsibleNotes(plan));
+    return `
+      <div class="rounded-xl border bd surface p-4 shadow-card">
+        <h2 class="font-display font-semibold txt">What this trip asks of you</h2>
+        <p class="mt-1 text-sm txt-muted">Be travelers, not tourists — applied to these stops rather than printed on a poster. Everything below is here because of somewhere you are actually going.</p>
+      </div>
+      <div class="mt-6 flex flex-col gap-6">
+        ${groups.map((g) => `<section>
+          <h3 class="font-display text-sm font-semibold uppercase tracking-wide txt-faint">${esc(g.label)}</h3>
+          <ul class="mt-3 flex flex-col gap-3">
+            ${g.notes.map((n) => `<li class="rounded-xl border-l-4 p-4" style="${NOTE_TONE[n.kind] || ""}">
+              <h4 class="font-display font-semibold txt">${esc(n.title)}</h4>
+              <p class="mt-1.5 text-sm txt-muted">${esc(n.detail)}</p>
+              ${n.because.length ? `<p class="mt-2 text-xs txt-faint">Because of: ${esc(n.because.join(", "))}</p>` : ""}
+            </li>`).join("")}
+          </ul></section>`).join("")}
+      </div>`;
   }
 
   /* ---------- documents wallet ---------- */
@@ -1321,6 +1457,41 @@
     </section>`;
   }
 
+  /* ---------- festivals ---------- */
+  function festivalsView() {
+    const byMonth = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, list: festivalsInMonth(i + 1) }));
+    const stateCount = new Set(festivals.map((f) => f.stateId)).size;
+    return `
+    <div class="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      <h1 class="font-display text-3xl font-bold txt">India's festival calendar</h1>
+      <p class="mt-3 max-w-2xl txt-muted">Most travel sites reduce a whole country to &ldquo;best time to visit: October to March&rdquo;. India does not work like that. The year is organised around festivals, and walking into one unprepared — or missing one by a week — changes the trip completely.</p>
+      <div class="mt-6 grid grid-cols-3 gap-3">
+        ${[[String(festivals.length), "festivals"], [String(stateCount), "states & UTs"], ["12", "months covered"]]
+          .map(([v, l]) => `<div class="rounded-xl border bd surface p-4 text-center shadow-card"><div class="font-display text-2xl font-bold txt">${v}</div><div class="text-xs uppercase tracking-wide txt-faint">${l}</div></div>`).join("")}
+      </div>
+      <p class="mt-6 rounded-xl border-l-4 p-4 text-sm txt" style="border-color:#f59e0b;background:rgba(245,158,11,.12)">
+        <span class="font-semibold">About the dates.</span> Most of these follow lunar or regional calendars, so the Gregorian date moves every year — Holi is in March, but which day in March changes. We give you the months and say how the date is reckoned, rather than inventing a precise date that would be wrong by next year. Confirm the exact days before you book around one.
+      </p>
+      <nav class="mt-8 flex flex-wrap gap-2" aria-label="Jump to month">
+        ${byMonth.map(({ month, list }) => `<a href="#/festivals?m=${month}" class="rounded-lg border bd surface px-3 py-1.5 text-sm font-semibold txt">${monthFull(month)}<span class="ml-1.5 text-xs font-normal txt-faint">${list.length}</span></a>`).join("")}
+      </nav>
+      <div class="mt-10 flex flex-col gap-12">
+        ${byMonth.map(({ month, list }) => `<section id="month-${month}">
+          <div class="border-b bd pb-3">
+            <h2 class="font-display text-xl font-semibold txt">${monthFull(month)}</h2>
+            <p class="mt-1 text-sm txt-muted">${list.length} ${list.length === 1 ? "gathering" : "gatherings"} across ${new Set(list.map((f) => f.stateId)).size} ${new Set(list.map((f) => f.stateId)).size === 1 ? "state" : "states"}</p>
+          </div>
+          <div class="mt-5">${festivalList(list, true)}</div>
+        </section>`).join("")}
+      </div>
+      <div class="mt-14 rounded-2xl p-8 text-center text-white" style="background:#0b1b30;">
+        <h2 class="font-display text-2xl font-semibold">Plan a trip around one</h2>
+        <p class="mx-auto mt-3 max-w-xl text-navy-200">Tell us the month and we will build the itinerary around what is in season — and tell you what is on while you are there.</p>
+        <a href="#/start" class="mt-6 inline-block rounded-lg bg-accent px-6 py-3 text-sm font-semibold">Plan my trip</a>
+      </div>
+    </div>`;
+  }
+
   /* ---------- router ---------- */
   /* ---------- trip starter ---------- */
   const DAY_CHOICES = [4, 7, 10, 14, 21];
@@ -1413,6 +1584,7 @@
         : { view: "trips" };
     if (parts[0] === "trip") return { view: "trip", bag: params.get("bag") };
     if (parts[0] === "start") return { view: "start" };
+    if (parts[0] === "festivals") return { view: "festivals", month: params.get("m") };
     if (parts[0] === "circuits") return { view: "circuits" };
     if (parts[0] === "profile") return { view: "profile" };
     if (parts[0] === "campaign") return { view: "campaign" };
@@ -1441,6 +1613,7 @@
       }
       html = tripView();
     } else if (r.view === "start") html = startView();
+    else if (r.view === "festivals") html = festivalsView();
     else if (r.view === "circuits") html = circuitsView();
     else if (r.view === "trips") html = tripsView();
     else if (r.view === "workspace") html = workspaceView(r.id, r.tab);
@@ -1459,6 +1632,10 @@
     });
     badge();
     syncTabs(r.view);
+    if (r.view === "festivals" && r.month) {
+      const target = document.getElementById("month-" + r.month);
+      if (target) { target.scrollIntoView({ block: "start" }); return; }
+    }
     if (scroll !== false) window.scrollTo(0, 0);
   }
 
@@ -1628,6 +1805,17 @@
         btn.textContent = "Copied ✓";
         setTimeout(() => { btn.textContent = "Copy enquiry"; }, 1800);
       }
+      return;
+    }
+
+    const swapBtn = e.target.closest("[data-swap-from]");
+    if (swapBtn) {
+      e.preventDefault();
+      const from = swapBtn.dataset.swapFrom, to = swapBtn.dataset.swapTo;
+      cart = cart.map((x) => (x === from ? to : x));
+      save();
+      badge();
+      render(false);
       return;
     }
 

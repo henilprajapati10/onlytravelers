@@ -17,7 +17,15 @@ const page = await ctx.newPage();
 const errs = [];
 page.on("pageerror", (e) => errs.push("PAGEERROR: " + e.message));
 page.on("console", (m) => {
-  if (m.type() === "error" && !/404|favicon/.test(m.text())) errs.push("CONSOLE: " + m.text());
+  // A fast page.goto aborts Next's in-flight link prefetch; Next says so and
+  // falls back to a full navigation, which is correct behaviour, not a fault.
+  if (
+    m.type() === "error" &&
+    !/404|favicon/.test(m.text()) &&
+    !/Failed to fetch RSC payload/.test(m.text())
+  ) {
+    errs.push("CONSOLE: " + m.text());
+  }
 });
 
 let pass = 0;
@@ -216,6 +224,23 @@ await page.waitForTimeout(1000);
 ok("an imminent trip opens on Today", page.url().includes("tab=today"), page.url());
 ok("Today counts down", (await page.locator("text=/Tomorrow|In \\d+ days/").count()) > 0);
 
+// Once the trip is under way, Today carries the shape of the day and places
+// the guide's own advice in the part of the day it refers to.
+await page.goto(page.url().split("?")[0] + "?tab=itinerary", { waitUntil: "networkidle" });
+await page.waitForTimeout(600);
+// Day 1 is always a stay at the first stop; later days can be travel days,
+// and a travel day correctly shows the move rather than the shape of a day.
+const started = await page.evaluate(() => new Date().toISOString().slice(0, 10));
+await page.locator("button:has-text('Bookings')").first().click();
+await page.waitForTimeout(500);
+await page.fill('input[type="date"]', started);
+await page.waitForTimeout(600);
+await page.locator("button:has-text('Today')").first().click();
+await page.waitForTimeout(700);
+ok("Today shows how to spend the day", (await page.locator("text=/before 9am/").count()) > 0);
+ok("the guide's timing advice is placed in the day",
+   (await page.locator("text=Here specifically").count()) > 0);
+
 /* ---------- global search on desktop ---------- */
 await page.keyboard.press("/");
 await page.waitForTimeout(400);
@@ -241,8 +266,101 @@ await page.waitForTimeout(300);
 await page.locator("input[aria-label='Search']").fill("zzqqxnothingatall");
 await page.waitForTimeout(300);
 ok("empty search states so plainly", (await page.locator("text=/Nothing matches/").count()) > 0);
+await page.locator("input[aria-label='Search']").fill("hornbill");
+await page.waitForTimeout(300);
+ok("search reaches festivals", (await page.locator("[role=option]").first().innerText()).includes("Hornbill"));
 await page.keyboard.press("Escape");
 await page.waitForTimeout(300);
+
+/* ---------- festivals: the calendar nobody else publishes properly ---------- */
+await page.goto(B + "/festivals", { waitUntil: "networkidle" });
+await page.waitForTimeout(500);
+ok("festival calendar renders", (await page.locator("h1:has-text('festival calendar')").count()) > 0);
+const monthSections = await page.locator("section[id^='month-']").count();
+ok("every month has a section", monthSections === 12, `${monthSections}`);
+ok("the calendar is honest that lunar dates move", (await page.locator("text=/date moves|moves every year/i").count()) > 0);
+ok("festivals say what they do to a trip", (await page.locator("text=What it does to your trip").count()) > 0);
+ok("no price on the festival calendar", (await page.locator("body").innerText()).match(/₹\s?\d/) === null);
+
+await page.locator("a[href='#month-12']").first().click();
+await page.waitForTimeout(400);
+ok("December lists Hornbill", (await page.locator("#month-12 >> text=Hornbill Festival").count()) > 0);
+
+/* ---------- day shape and festivals on a destination ---------- */
+await page.goto(B + "/destinations/taj-mahal-agra", { waitUntil: "networkidle" });
+await page.waitForTimeout(500);
+ok("destination shows how a day works", (await page.locator("text=How a day here works").count()) > 0);
+ok("the day has three parts",
+   (await page.locator("text=Early").count()) > 0 &&
+   (await page.locator("text=Midday").count()) > 0 &&
+   (await page.locator("text=Evening").count()) > 0);
+// The tip has its own box on this page, so the day shape must not repeat it.
+ok("the destination prints its tip exactly once",
+   (await page.locator("text=Traveler tip").count()) === 1 &&
+   (await page.locator("text=Here specifically").count()) === 0);
+
+await page.goto(B + "/destinations/hornbill-festival-kisama", { waitUntil: "networkidle" });
+await page.waitForTimeout(500);
+ok("a festival destination lists its festival", (await page.locator("text=Hornbill Festival, Kisama").count()) > 0);
+
+/* ---------- swaps and Respect on a real trip ---------- */
+// A deliberately wrong trip: Goa beaches and a Himalayan hill town in July.
+await page.goto(
+  B + "/trip?bag=baga-calangute-anjuna,manali-solang-valley,kaziranga-national-park-unesco",
+  { waitUntil: "networkidle" }
+);
+await page.waitForTimeout(900);
+// The bag link fills the ACTIVE trip; the hub list is ordered independently,
+// so open the active one via the header chip rather than the first card.
+await page.locator("header a:has-text('🎒')").first().click();
+await page.waitForURL("**/trips/**", { timeout: 10000 });
+await page.waitForTimeout(800);
+
+await page.locator("button:has-text('Itinerary')").first().click();
+await page.waitForTimeout(500);
+await page.selectOption("#travel-month", "7");
+await page.waitForTimeout(700);
+
+ok("the trip offers a change", (await page.locator("text=Would this trip be better with a change?").count()) > 0);
+const swapCards = await page.locator("button:has-text('Make the swap')").count();
+ok("swaps are offered for a July hill trip", swapCards > 0, `${swapCards} swaps`);
+ok("an unfixable stop is said out loud", (await page.locator("text=/we have nothing better/").count()) > 0);
+
+// Respect is checked before the swap, because the swap deliberately changes
+// which stops are in the trip — and the notes are derived from the stops.
+await page.locator("button:has-text('Respect')").first().click();
+await page.waitForTimeout(600);
+ok("Respect tab renders", (await page.locator("text=What this trip asks of you").count()) > 0);
+ok("wildlife conduct is derived from the trip", (await page.locator("text=/do not push your driver/i").count()) > 0);
+ok("a trip with no reef is not lectured about coral", (await page.locator("text=/never stand on, touch or collect coral/i").count()) === 0);
+ok("where the money lands is covered", (await page.locator("text=/Book the bed and the guide locally/i").count()) > 0);
+ok("no price in the Respect tab", (await page.locator("body").innerText()).match(/₹\s?\d/) === null);
+
+// Now take a swap and prove it really rewrites the itinerary.
+await page.locator("button:has-text('Itinerary')").first().click();
+await page.waitForTimeout(600);
+const routeBefore = await page.locator("body").innerText();
+const swapTarget = await page.locator("button:has-text('Make the swap')").first().evaluate(
+  (b) => b.closest("div")?.querySelector("a:last-of-type")?.textContent?.trim() ?? ""
+);
+await page.locator("button:has-text('Make the swap')").first().click();
+await page.waitForTimeout(1000);
+const routeAfter = await page.locator("body").innerText();
+ok("the swap actually rewrites the trip", routeAfter !== routeBefore);
+ok("the swapped-in place is now in the itinerary",
+   swapTarget.length > 0 && routeAfter.includes(swapTarget), swapTarget);
+
+/* ---------- an Andaman trip gets the rules that actually apply ---------- */
+await page.goto(B + "/trip?bag=radhanagar-beach-havelock,baratang-limestone-caves", { waitUntil: "networkidle" });
+await page.waitForTimeout(900);
+await page.locator("header a:has-text('🎒')").first().click();
+await page.waitForURL("**/trips/**", { timeout: 10000 });
+await page.waitForTimeout(800);
+await page.locator("button:has-text('Respect')").first().click();
+await page.waitForTimeout(600);
+ok("the Jarawa rule appears for the Andamans", (await page.locator("text=/Jarawa/").count()) > 0);
+ok("it is marked as law, not etiquette", (await page.locator("text=The law").count()) > 0);
+ok("the coral rule appears", (await page.locator("text=/coral/i").count()) > 0);
 
 /* ---------- PWA plumbing ---------- */
 const mani = await page.goto(B + "/manifest.webmanifest");

@@ -14,6 +14,7 @@ const KIND_ICON: Record<SearchResult["kind"], string> = {
   state: "🗺️",
   circuit: "🧭",
   theme: "🏷️",
+  festival: "🎊",
   action: "⚡",
 };
 

@@ -1,6 +1,7 @@
 import { destinations, themes, type Theme } from "@/data/destinations";
 import { states, zones } from "@/data/states";
 import { circuits } from "@/data/circuits";
+import { festivals } from "@/data/festivals";
 import { guides } from "@/data/guides";
 import { renownScore } from "@/data/renown";
 
@@ -12,7 +13,7 @@ import { renownScore } from "@/data/renown";
  * ranks them in one list rather than making people pick a section first.
  */
 
-export type ResultKind = "destination" | "state" | "circuit" | "theme" | "action";
+export type ResultKind = "destination" | "state" | "circuit" | "theme" | "festival" | "action";
 
 export interface SearchResult {
   kind: ResultKind;
@@ -93,6 +94,13 @@ const ACTIONS: { id: string; title: string; subtitle: string; href: string; keyw
     keywords: "circuits routes ready made packages itineraries",
   },
   {
+    id: "festivals",
+    title: "India's festival calendar",
+    subtitle: "What is on, month by month, across all 36 states",
+    href: "/festivals",
+    keywords: "festival festivals calendar mela event events what is on when",
+  },
+  {
     id: "campaign",
     title: "Be travelers, not tourists",
     subtitle: "What the campaign actually asks of you",
@@ -165,6 +173,24 @@ export function search(query: string, limit = 12): SearchResult[] {
         title: c.name,
         subtitle: `Circuit · ${c.tagline} · ${c.slugs.length} stops`,
         href: `/circuits#${c.id}`,
+        score,
+      });
+    }
+  }
+
+  for (const f of festivals) {
+    const score = best(
+      matchScore(f.name, terms, 90),
+      matchScore(f.whenLabel, terms, 20),
+      matchScore(f.what, terms, 12)
+    );
+    if (score > 0) {
+      out.push({
+        kind: "festival",
+        id: f.id,
+        title: f.name,
+        subtitle: `Festival · ${f.whenLabel}`,
+        href: `/festivals#month-${f.months[0]}`,
         score,
       });
     }

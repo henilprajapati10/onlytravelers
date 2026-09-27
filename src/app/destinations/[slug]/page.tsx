@@ -11,6 +11,9 @@ import StateMap from "@/components/StateMap";
 import { formatDays, seasonBadge, themeEmoji } from "@/lib/format";
 import { sceneSvg } from "@/lib/scene";
 import { pairsWellWith } from "@/lib/suggest";
+import { festivalsForSlug } from "@/data/festivals";
+import FestivalList from "@/components/FestivalList";
+import DayShapeCard from "@/components/DayShapeCard";
 
 export function generateStaticParams() {
   return destinations.map((d) => ({ slug: d.slug }));
@@ -39,6 +42,7 @@ export default function DestinationPage({ params }: { params: { slug: string } }
     .filter((d) => d.slug !== destination.slug && d.stateId === destination.stateId)
     .slice(0, 3);
   const pairs = pairsWellWith(destination, 3);
+  const localFestivals = festivalsForSlug(destination.slug);
 
   return (
     <article>
@@ -120,6 +124,30 @@ export default function DestinationPage({ params }: { params: { slug: string } }
                   </h3>
                   <p className="mt-2 text-navy-700">{guide.tip}</p>
                 </div>
+              </>
+            )}
+
+            {/* How a day here actually works */}
+            <h3 className="mt-10 font-display text-lg font-semibold text-navy-800">
+              How a day here works
+            </h3>
+            <p className="mb-3 mt-1 text-sm text-navy-500">
+              Most of India rewards an early start and a real break in the middle. This is the
+              rhythm this place in particular repays.
+            </p>
+            {/* The tip already has its own box above; no need to print it twice. */}
+            <DayShapeCard destination={destination} compact showAdvice={false} />
+
+            {localFestivals.length > 0 && (
+              <>
+                <h3 className="mt-10 font-display text-lg font-semibold text-navy-800">
+                  {localFestivals.length === 1 ? "The festival here" : "Festivals here"}
+                </h3>
+                <p className="mb-3 mt-1 text-sm text-navy-500">
+                  Worth timing a trip around — or deliberately avoiding, if you came for the place
+                  rather than the crowd.
+                </p>
+                <FestivalList festivals={localFestivals} />
               </>
             )}
 

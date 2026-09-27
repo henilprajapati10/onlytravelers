@@ -48,6 +48,10 @@ const MODULES = [
   "src/lib/search.ts",
   "src/lib/storage.ts",
   "src/lib/wallet.ts",
+  "src/data/festivals.ts",
+  "src/lib/alternatives.ts",
+  "src/lib/responsible.ts",
+  "src/lib/dayshape.ts",
 ];
 
 /** "src/data/guides/index.ts" -> canonical id "@/data/guides" */
@@ -123,6 +127,10 @@ ${registry}
     search: __req("@/lib/search"),
     storage: __req("@/lib/storage"),
     wallet: __req("@/lib/wallet"),
+    festivals: __req("@/data/festivals"),
+    alternatives: __req("@/lib/alternatives"),
+    responsible: __req("@/lib/responsible"),
+    dayshape: __req("@/lib/dayshape"),
   };
 })();
 `;

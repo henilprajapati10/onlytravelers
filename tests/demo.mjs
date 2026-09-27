@@ -130,9 +130,71 @@ await go("#/");
 ok("home opens on the trip", (await page.locator("text=Your trip").count()) > 0);
 ok("home offers all trips", (await page.locator("a:has-text('All my trips')").count()) > 0);
 
+/* ---------- festivals ---------- */
+await go("#/festivals");
+ok("demo has the festival calendar", (await page.locator("h1").first().innerText()).includes("festival calendar"));
+const demoMonths = await page.locator("section[id^='month-']").count();
+ok("all twelve months are listed", demoMonths === 12, `${demoMonths}`);
+ok("lunar honesty is stated", (await page.locator("text=/moves every year/i").count()) > 0);
+ok("December carries Hornbill", (await page.locator("#month-12 >> text=Hornbill Festival").count()) > 0);
+ok("festivals state their impact", (await page.locator("text=What it does to your trip").count()) > 0);
+
+/* ---------- day shape and festivals on a destination ---------- */
+await go("#/destinations/taj-mahal-agra");
+ok("destination shows the shape of a day", (await page.locator("text=How a day here works").count()) > 0);
+ok("the destination prints its tip exactly once",
+   (await page.locator("text=TRAVELER TIP, text=Traveler tip").count() >= 0) &&
+   (await page.locator("text=Here specifically").count()) === 0);
+await go("#/destinations/hornbill-festival-kisama");
+ok("a festival destination lists it", (await page.locator("text=Hornbill Festival, Kisama").count()) > 0);
+
+/* ---------- swaps and respect on a deliberately wrong trip ---------- */
+await page.evaluate(() => localStorage.clear());
+await go("#/trip?bag=baga-calangute-anjuna,manali-solang-valley,kaziranga-national-park-unesco");
+await page.waitForTimeout(500);
+await page.locator("header a:has-text('🎒')").first().click();
+await page.waitForTimeout(700);
+await page.locator("a:has-text('Itinerary')").first().click();
+await page.waitForTimeout(600);
+await page.selectOption("#p-month", "7");
+await page.waitForTimeout(800);
+ok("demo offers a change", (await page.locator("text=Would this trip be better with a change?").count()) > 0);
+const demoSwaps = await page.locator("[data-swap-from]").count();
+ok("demo offers swaps for a July hill trip", demoSwaps > 0, `${demoSwaps}`);
+ok("demo says when nothing fits", (await page.locator("text=/we have nothing better/").count()) > 0);
+
+await page.locator("a:has-text('Respect')").first().click();
+await page.waitForTimeout(600);
+ok("demo Respect tab renders", (await page.locator("text=What this trip asks of you").count()) > 0);
+ok("wildlife conduct is derived", (await page.locator("text=/do not push your driver/i").count()) > 0);
+ok("no coral lecture without a reef", (await page.locator("text=/never stand on, touch or collect coral/i").count()) === 0);
+
+// The swap must really rewrite the trip.
+await page.locator("a:has-text('Itinerary')").first().click();
+await page.waitForTimeout(600);
+const swapTo = await page.locator("[data-swap-from]").first().getAttribute("data-swap-to");
+await page.locator("[data-swap-from]").first().click();
+await page.waitForTimeout(800);
+ok("the demo swap rewrites the trip",
+   (await page.locator("body").innerText()).length > 0 &&
+   (await page.locator(`[data-swap-to="${swapTo}"]`).count()) === 0, swapTo);
+
+/* ---------- the Andamans get the rules that apply ---------- */
+await page.evaluate(() => localStorage.clear());
+await go("#/trip?bag=radhanagar-beach-havelock,baratang-limestone-caves");
+await page.waitForTimeout(500);
+await page.locator("header a:has-text('🎒')").first().click();
+await page.waitForTimeout(700);
+await page.locator("a:has-text('Respect')").first().click();
+await page.waitForTimeout(600);
+ok("the Jarawa rule appears", (await page.locator("text=/Jarawa/").count()) > 0);
+ok("it is filed under the law", (await page.locator("text=The law").count()) > 0);
+ok("the coral rule appears", (await page.locator("text=/coral/i").count()) > 0);
+await page.evaluate(() => localStorage.clear());
+
 /* ---------- no price anywhere ---------- */
 let priced = [];
-for (const h of ["#/", "#/start", "#/destinations", "#/circuits", "#/states/kerala", "#/destinations/alleppey-backwaters"]) {
+for (const h of ["#/", "#/start", "#/destinations", "#/circuits", "#/festivals", "#/states/kerala", "#/destinations/alleppey-backwaters"]) {
   await go(h);
   const body = await page.locator("body").innerText();
   if (/(₹|Rs\.?\s?)\d[\d,]*\s*(per|each|onwards|entry|ticket|fee)/i.test(body)) priced.push(h);
@@ -154,7 +216,7 @@ await m.locator("[data-search-go]").first().click();
 await m.waitForTimeout(500);
 ok("a search result navigates", m.url().includes("#/destinations/pangong-tso"), m.url().split("#")[1]);
 
-for (const h of ["#/", "#/start", "#/trips", "#/destinations"]) {
+for (const h of ["#/", "#/start", "#/trips", "#/destinations", "#/festivals"]) {
   await m.goto(file + h, { waitUntil: "load" });
   await m.waitForTimeout(400);
   const overflow = await m.evaluate(

@@ -11,6 +11,7 @@ const navLinks = [
   { href: "/destinations", label: "Destinations" },
   { href: "/states", label: "States" },
   { href: "/circuits", label: "Circuits" },
+  { href: "/festivals", label: "Festivals" },
   { href: "/trips", label: "My Trips" },
   { href: "/profile", label: "You" },
 ];
