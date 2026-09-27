@@ -7,7 +7,7 @@ import { getImages } from "@/data/images";
 import AddToCartButton from "@/components/AddToCartButton";
 import DestinationCard from "@/components/DestinationCard";
 import DestinationImage from "@/components/DestinationImage";
-import StateMap from "@/components/StateMap";
+import PlaceMap from "@/components/PlaceMap";
 import { formatDays, seasonBadge, themeEmoji } from "@/lib/format";
 import { sceneSvg } from "@/lib/scene";
 import { pairsWellWith } from "@/lib/suggest";
@@ -286,16 +286,7 @@ export default function DestinationPage({ params }: { params: { slug: string } }
               </div>
 
               {/* Map slot — 1:1 per the layout spec */}
-              <div className="rounded-2xl border border-navy-100 bg-white p-4 shadow-card">
-                <h3 className="mb-2 font-display text-xs font-semibold uppercase tracking-wide text-navy-500">
-                  Where it is
-                </h3>
-                <StateMap stateId={state.id} />
-                <p className="mt-2 text-xs text-navy-400">
-                  {destination.district}, {state.name}. Pin marks the state travel hub — verify
-                  exact coordinates and access roads before you set out.
-                </p>
-              </div>
+              <PlaceMap destination={destination} />
             </div>
           </aside>
         </div>

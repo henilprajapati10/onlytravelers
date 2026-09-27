@@ -6,6 +6,7 @@ import { useTrips } from "@/context/TripsContext";
 import { formatMonths, monthFull, monthName, type TripPlan, type TripWarning } from "@/lib/trip";
 import { formatDays, shortDays, themeEmoji } from "@/lib/format";
 import { downloadFile, tripShareUrl, tripToIcs, tripToText } from "@/lib/export";
+import { googleRouteUrl, routeIsTruncated } from "@/lib/maps";
 
 const WARNING_STYLE: Record<TripWarning["kind"], { ring: string; chip: string; label: string }> = {
   permit: { ring: "border-coral-400", chip: "bg-coral-100 text-coral-700", label: "Permit" },
@@ -58,6 +59,13 @@ export default function TripItinerary({
         ? `${formatDays(plan.totalDays - daysAvailable)} over`
         : `This plan needs ${plan.totalDays} days`;
 
+  // The whole route in one Google Maps link. Maps caps the waypoints, so a
+  // long trip opens as its first legs rather than as a link that silently
+  // fails — and says so instead of pretending it is the whole thing.
+  const stops = plan.stops.map((s) => s.destination);
+  const routeUrl = googleRouteUrl(stops);
+  const truncated = routeIsTruncated(stops);
+
   return (
     <div>
       <div className="flex flex-wrap gap-2 print:hidden">
@@ -93,6 +101,21 @@ export default function TripItinerary({
         >
           Calendar
         </button>
+        {routeUrl && (
+          <a
+            href={routeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={
+              truncated
+                ? `Google Maps carries 11 stops in one link; this opens the first 11 of ${stops.length}.`
+                : "Opens every stop, in order, as a driving route"
+            }
+            className="rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm font-semibold text-navy-700 hover:border-coral-300"
+          >
+            🗺️ Route in Google Maps{truncated ? ` (first 11 of ${stops.length})` : ""} ↗
+          </a>
+        )}
       </div>
 
       {/* Controls */}

@@ -6,6 +6,7 @@ import type { TripPlan } from "@/lib/trip";
 import { todayFor, formatTripDate } from "@/lib/today";
 import { NATIONAL_NUMBERS, essentialsFor } from "@/data/essentials";
 import { countLabel, themeEmoji } from "@/lib/format";
+import { googleDirectionsUrl } from "@/lib/maps";
 import DayShapeCard from "./DayShapeCard";
 
 const LEG_ICON: Record<string, string> = {
@@ -214,6 +215,22 @@ export default function TodayCard({
         )}
 
         <div className="flex flex-wrap gap-2">
+          {/* Standing on a platform, the question is how to get to the next
+              thing — so the link points at wherever today is heading. */}
+          {(() => {
+            const target = state.todayLeg ? state.next?.destination : here?.destination;
+            if (!target) return null;
+            return (
+              <a
+                href={googleDirectionsUrl(target)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg bg-navy-800 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700"
+              >
+                🧭 Directions to {target.name} ↗
+              </a>
+            );
+          })()}
           <Link
             href={`/trips/${trip.id}`}
             className="rounded-lg border border-navy-200 px-4 py-2 text-sm font-semibold text-navy-700 hover:border-coral-300"

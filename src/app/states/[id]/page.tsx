@@ -3,7 +3,9 @@ import Link from "next/link";
 import { states, getState } from "@/data/states";
 import { destinationsInState } from "@/data/destinations";
 import DestinationCard from "@/components/DestinationCard";
-import StateMap from "@/components/StateMap";
+import { StateOutline } from "@/components/IndiaMap";
+import { coordFor } from "@/data/coords";
+import { googleRouteUrl } from "@/lib/maps";
 
 export function generateStaticParams() {
   return states.map((s) => ({ id: s.id }));
@@ -23,6 +25,8 @@ export default function StatePage({ params }: { params: { id: string } }) {
   if (!state) notFound();
 
   const list = destinationsInState(state.id);
+  const placed = list.filter((d) => coordFor(d.slug)).length;
+  const routeUrl = googleRouteUrl(list.slice(0, 11));
   const totalDays = list.reduce((sum, d) => sum + d.idealDays, 0);
 
   return (
@@ -82,10 +86,22 @@ export default function StatePage({ params }: { params: { id: string } }) {
               )}
             </div>
 
-            <div className="lg:col-span-1">
-              <StateMap stateId={state.id} />
-              <p className="mt-2 text-center text-xs text-navy-400">
-                {state.capital} · {state.lat.toFixed(2)}°N, {state.lng.toFixed(2)}°E
+            <div className="mx-auto w-full max-w-sm lg:col-span-1">
+              {/* The real outline of this state, with every destination in it
+                  pinned where it actually is. */}
+              <StateOutline
+                stateId={state.id}
+                pins={list
+                  .map((d) => {
+                    const c = coordFor(d.slug);
+                    return c
+                      ? { lat: c.lat, lng: c.lng, label: d.name, href: `/destinations/${d.slug}` }
+                      : null;
+                  })
+                  .filter((p): p is NonNullable<typeof p> => p !== null)}
+              />
+              <p className="mt-1 text-center text-xs text-navy-400">
+                {placed} of {list.length} destinations pinned · {state.capital} is the travel hub
               </p>
             </div>
           </div>
@@ -94,9 +110,21 @@ export default function StatePage({ params }: { params: { id: string } }) {
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <h2 className="font-display text-2xl font-semibold text-navy-800">
-            {list.length} destinations in {state.name}
-          </h2>
+          <div>
+            <h2 className="font-display text-2xl font-semibold text-navy-800">
+              {list.length} destinations in {state.name}
+            </h2>
+            {routeUrl && (
+              <a
+                href={routeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-block text-sm font-semibold text-coral-500"
+              >
+                Open the first {Math.min(list.length, 11)} as a driving route in Google Maps ↗
+              </a>
+            )}
+          </div>
           <p className="text-sm text-navy-400">
             {totalDays} days to see all of it, before travel between them
           </p>

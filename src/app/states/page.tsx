@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { states, zones, zoneBlurbs } from "@/data/states";
 import { destinations } from "@/data/destinations";
+import { IndiaMap } from "@/components/IndiaMap";
 
 export const metadata = {
   title: "India, state by state — OnlyTravelers",
@@ -17,6 +18,26 @@ function StatesIndex() {
         All 28 states and 8 union territories, grouped into six travel zones — with the
         capital, airports and peak window for each.
       </p>
+
+      {/* Real 2023 boundaries — click the state you are thinking about. */}
+      <div className="mt-8 grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:items-center">
+        <IndiaMap linkStates className="mx-auto w-full max-w-md" />
+        <div>
+          <h2 className="font-display text-xl font-semibold text-navy-800">
+            Or just point at it
+          </h2>
+          <p className="mt-2 text-sm text-navy-500">
+            Every state and union territory is drawn from its real administrative
+            boundary, in one shared projection — so a place pinned on a state page sits
+            in exactly the same spot here. Tap any of them to open it.
+          </p>
+          <p className="mt-3 text-sm text-navy-500">
+            <Link href="/map-data" className="font-semibold text-coral-500">
+              Where this map comes from →
+            </Link>
+          </p>
+        </div>
+      </div>
 
       <div className="mt-10 flex flex-col gap-12">
         {zones.map((zone) => {
