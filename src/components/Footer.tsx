@@ -40,6 +40,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/map" className="hover:text-coral-400">
+                  Explore on the Map
+                </Link>
+              </li>
+              <li>
                 <Link href="/cart" className="hover:text-coral-400">
                   Your Trip Bag
                 </Link>

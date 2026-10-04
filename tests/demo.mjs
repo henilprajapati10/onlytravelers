@@ -201,6 +201,83 @@ for (const h of ["#/", "#/start", "#/destinations", "#/circuits", "#/festivals",
 }
 ok("no page quotes a price", priced.length === 0, priced.join(", "));
 
+/* ---------- Google Maps ---------- */
+{
+  const q = (sel) => page.locator(sel);
+  const gUrl = async (sel) => new URL(await q(sel).first().getAttribute("href"));
+
+  await go("#/destinations/hampi-unesco");
+  const embed = await q("iframe[data-google-map]").first().getAttribute("src");
+  ok("destination page embeds a Google Map", embed.startsWith("https://www.google.com/maps") && embed.includes("Hampi"), embed.slice(0, 80));
+  ok("the map has an accessible title", (await q("iframe[data-google-map]").first().getAttribute("title")).includes("Hampi"));
+  const dir = await gUrl("[data-maps-directions]");
+  ok("Directions starts from the traveller's own position", dir.pathname === "/maps/dir/" && !dir.searchParams.has("origin") && dir.searchParams.get("destination").includes("Karnataka"));
+  ok("map links open outside the app", (await q("[data-maps-open]").first().getAttribute("target")) === "_blank");
+  ok("nearby essentials are one tap away", (await q("[data-nearby]").count()) >= 8);
+  const atm = await gUrl("[data-nearby='atm']");
+  ok("nearby search is anchored to the place", atm.searchParams.get("query").startsWith("ATM near Hampi"));
+
+  await go("#/states/kerala");
+  ok("state page embeds a Google Map of the state", (await q("iframe[data-google-map]").first().getAttribute("src")).includes("Kerala"));
+  ok("state page links to every stop on the map", (await q("a[href='#/map?state=kerala']").count()) > 0);
+
+  await go("#/map");
+  ok("explore-on-the-map route renders", (await q("h1:has-text('Explore on the map')").count()) === 1);
+  await page.selectOption("#map-state", "rajasthan");
+  await page.waitForTimeout(400);
+  ok("picking a state narrows the list", page.url().includes("state=rajasthan") && (await q("[data-map-title]").innerText()) === "Rajasthan");
+  await page.fill("#map-q", "fort");
+  await page.waitForTimeout(300);
+  ok("the filter keeps focus while typing", await page.evaluate(() => document.activeElement && document.activeElement.id === "map-q"));
+  const firstPlace = await q("[data-map-place]").first().getAttribute("data-map-place");
+  await q("[data-map-place]").first().click();
+  await page.waitForTimeout(500);
+  ok("picking a place moves the map to it", page.url().includes("place=" + firstPlace) && (await q("iframe[data-google-map]").first().getAttribute("src")).includes("Rajasthan"));
+  ok("a picked place can go straight into the trip", (await q(`[data-toggle='${firstPlace}']`).count()) > 0);
+
+  // A trip that drives and then flies: the Map tab splits the road route at the flight.
+  await page.evaluate(() => {
+    const id = "trip_mapcheck";
+    localStorage.setItem("onlytravelers.demo.trips.v1", JSON.stringify({
+      activeId: id,
+      trips: [{ id, name: "Coast and islands", status: "planning", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        slugs: ["baga-calangute-anjuna", "palolem-agonda", "radhanagar-beach-havelock", "neil-island-shaheed-dweep"] }],
+    }));
+  });
+  await go("#/trips/trip_mapcheck?tab=map");
+  await page.reload({ waitUntil: "load" });
+  await page.waitForTimeout(500);
+  ok("the trip has a Map tab", (await q("[data-trip-map]").count()) === 1);
+  ok("the trip map embeds a route", (await q("iframe[data-google-map]").first().getAttribute("src")).includes("saddr="));
+  ok("every move gets a link", (await q("[data-leg-link]").count()) === 3);
+  ok("the flight leg links to flights, not driving", (await q("[data-leg-link='flights']").count()) >= 1);
+  const route = await gUrl("[data-open-route]");
+  ok("navigate opens the route in Google Maps", route.pathname === "/maps/dir/" && route.searchParams.get("origin").startsWith("Baga"));
+  await q("[data-map-stop='palolem-agonda']").click();
+  await page.waitForTimeout(400);
+  ok("tapping a stop shows it and what is around it",
+     (await q("iframe[data-google-map]").first().getAttribute("src")).includes("Palolem") && (await q("[data-nearby]").count()) === 8);
+
+  // Today, during the trip: navigation to where you are.
+  await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("onlytravelers.demo.trips.v1"));
+    s.trips[0].startDate = new Date().toISOString().slice(0, 10);
+    localStorage.setItem("onlytravelers.demo.trips.v1", JSON.stringify(s));
+  });
+  await go("#/trips/trip_mapcheck?tab=today");
+  await page.reload({ waitUntil: "load" });
+  await page.waitForTimeout(500);
+  ok("Today offers navigation", (await q("[data-today-nav] a").count()) > 0);
+
+  // No signal: say so, and keep the link that still works.
+  await ctx.setOffline(true);
+  await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+  await go("#/destinations/hampi-unesco");
+  ok("offline, the map says there is no signal instead of a grey box",
+     (await q("iframe[data-google-map]").count()) === 0 && (await q("text=No signal, so no live map").count()) > 0);
+  await ctx.setOffline(false);
+}
+
 /* ---------- phone shell ---------- */
 const m = await ctx.newPage();
 await m.setViewportSize({ width: 390, height: 844 });
@@ -216,7 +293,7 @@ await m.locator("[data-search-go]").first().click();
 await m.waitForTimeout(500);
 ok("a search result navigates", m.url().includes("#/destinations/pangong-tso"), m.url().split("#")[1]);
 
-for (const h of ["#/", "#/start", "#/trips", "#/destinations", "#/festivals"]) {
+for (const h of ["#/", "#/start", "#/trips", "#/destinations", "#/festivals", "#/map", "#/destinations/hampi-unesco"]) {
   await m.goto(file + h, { waitUntil: "load" });
   await m.waitForTimeout(400);
   const overflow = await m.evaluate(

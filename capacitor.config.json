@@ -1,0 +1,13 @@
+{
+  "appId": "com.onlytravelers.app",
+  "appName": "OnlyTravelers",
+  "webDir": "mobile/www",
+  "backgroundColor": "#fbf8f3",
+  "android": {
+    "backgroundColor": "#fbf8f3"
+  },
+  "ios": {
+    "backgroundColor": "#fbf8f3",
+    "contentInset": "never"
+  }
+}

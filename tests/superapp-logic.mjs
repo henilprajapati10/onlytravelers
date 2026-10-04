@@ -22,6 +22,7 @@ const MODULES = [
   "src/lib/starter.ts", "src/lib/today.ts", "src/lib/search.ts",
   "src/lib/alternatives.ts", "src/lib/responsible.ts", "src/lib/dayshape.ts",
   "src/lib/storage.ts", "src/lib/wallet.ts", "src/lib/export.ts",
+  "src/lib/maps.ts",
 ];
 
 const id = (f) => {
@@ -413,6 +414,70 @@ ok("no destination guide quotes a price", priced === 0, `${priced} found`);
 /* ---------- search reaches the new layer ---------- */
 ok("search finds a festival", Se.search("hornbill").some((r) => r.kind === "festival"));
 ok("search finds the festival calendar", Se.search("festival calendar").some((r) => r.kind === "action"));
+
+/* ---------- Google Maps ---------- */
+{
+  const M = __req("@/lib/maps");
+  const bySlug = (s) => D.destinations.find((d) => d.slug === s);
+  const hampi = D.destinations.find((d) => /hampi/i.test(d.slug));
+
+  // Every place gets a query Google can resolve: name first, state and country after.
+  const queries = D.destinations.map(M.placeQuery);
+  ok("every destination gets a map query naming its state and India",
+     D.destinations.every((d, i) => queries[i].startsWith(d.name) && queries[i].endsWith(", India") && queries[i].includes(d.stateName) || d.name === d.stateName));
+  ok("no query repeats the state as its district", !queries.some((q) => /, ([^,]+), \1, India$/.test(q)));
+  ok("no map URL carries a coordinate we would have had to invent",
+     !queries.some((q) => /\d+\.\d+\s*,\s*\d+\.\d+/.test(q)));
+
+  const search = new URL(M.mapsSearchUrl(M.placeQuery(hampi)));
+  ok("open-in-Maps uses the Maps URLs API", search.origin === "https://www.google.com" && search.searchParams.get("api") === "1");
+  ok("open-in-Maps round-trips the place name", search.searchParams.get("query") === M.placeQuery(hampi));
+
+  const here = new URL(M.directionsFromHereUrl("Hampi, Karnataka, India"));
+  ok("directions from here leave the origin to the device", !here.searchParams.has("origin") && here.searchParams.get("destination") === "Hampi, Karnataka, India");
+
+  // A long road trip splits into parts of at most five stops that share ends.
+  const longSlugs = D.destinations.filter((d) => d.stateId === "rajasthan").slice(0, 9).map((d) => d.slug);
+  const longPlan = T.buildTrip(longSlugs.map(bySlug));
+  const segs = M.routeSegments(longPlan);
+  ok("a nine-stop road trip comes in parts", segs.length >= 2, `${segs.length} parts`);
+  ok("no route link carries more than five stops (phone limit)", segs.every((s) => s.slugs.length <= M.MAX_STOPS_PER_LINK && s.slugs.length >= 2));
+  ok("parts join end to end", segs.every((s, i) => i === 0 || segs[i - 1].slugs[segs[i - 1].slugs.length - 1] === s.slugs[0]));
+  ok("the parts cover every stop, in order",
+     JSON.stringify([...new Set(segs.flatMap((s) => s.slugs))]) === JSON.stringify(longPlan.stops.map((s) => s.destination.slug)));
+  const u = new URL(segs[0].url);
+  ok("a route link has origin, destination and waypoints",
+     u.searchParams.get("origin") === segs[0].queries[0] &&
+     u.searchParams.get("destination") === segs[0].queries[segs[0].queries.length - 1] &&
+     u.searchParams.get("waypoints").split("|").length === segs[0].queries.length - 2);
+
+  // Crossing to the islands: no driving route across the sea.
+  const island = T.buildTrip(["baga-calangute-anjuna", "palolem-agonda", "radhanagar-beach-havelock", "neil-island-shaheed-dweep"].map(bySlug));
+  const islandSegs = M.routeSegments(island);
+  const islandLegs = M.mapLegs(island);
+  const seaLeg = islandLegs.find((l) => !l.drivable);
+  ok("a trip that flies to the islands breaks the road route there",
+     islandSegs.every((s) => !(s.slugs.includes("palolem-agonda") && s.slugs.includes("radhanagar-beach-havelock"))),
+     islandSegs.map((s) => s.names.join(">")).join(" | "));
+  ok("the flying leg links to flights, not driving directions",
+     Boolean(seaLeg) && seaLeg.url.startsWith("https://www.google.com/travel/flights") && seaLeg.urlLabel === "Flights");
+  ok("every leg in a trip gets a link", islandLegs.length === island.stops.length - 1 && islandLegs.every((l) => l.url.startsWith("https://www.google.com/")));
+
+  // Embeds: keyless by default, Embed API with a key.
+  ok("keyless place embed uses Google's classic embed", M.embedPlaceUrl("Hampi, India").includes("output=embed") && !M.embedPlaceUrl("Hampi, India").includes("key="));
+  ok("a key switches to the Maps Embed API", M.embedPlaceUrl("Hampi, India", "K").startsWith("https://www.google.com/maps/embed/v1/place?key=K"));
+  const routeKeyed = new URL(M.embedRouteUrl(["A, India", "B, India", "C, India"], "K"));
+  ok("keyed route embed draws origin, waypoints and destination",
+     routeKeyed.pathname.endsWith("/embed/v1/directions") && routeKeyed.searchParams.get("waypoints") === "B, India" && routeKeyed.searchParams.get("destination") === "C, India");
+  ok("keyless route embed chains the stops", decodeURIComponent(M.embedRouteUrl(["A", "B", "C"])).includes("daddr=B to:C"));
+  ok("a single stop embeds as a place, not a broken route", M.embedRouteUrl(["A"]) === M.embedPlaceUrl("A"));
+
+  // Nearby essentials.
+  ok("nearby search covers the things people need on the ground",
+     ["atm", "hospital", "pharmacy", "fuel", "police", "stay", "food"].every((k) => M.NEARBY_KINDS.some((n) => n.id === k)));
+  const atm = new URL(M.nearbyUrl(M.NEARBY_KINDS.find((n) => n.id === "atm"), M.placeQuery(hampi)));
+  ok("nearby search is anchored to the place", atm.searchParams.get("query") === `ATM near ${M.placeQuery(hampi)}`);
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

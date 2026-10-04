@@ -7,6 +7,8 @@ import { todayFor, formatTripDate } from "@/lib/today";
 import { NATIONAL_NUMBERS, essentialsFor } from "@/data/essentials";
 import { countLabel, themeEmoji } from "@/lib/format";
 import DayShapeCard from "./DayShapeCard";
+import { MapButtons, NearbyChips } from "./MapActions";
+import { directionsFromHereUrl, flightsUrl, googleModeFor, isDrivable, placeQuery } from "@/lib/maps";
 
 const LEG_ICON: Record<string, string> = {
   Flight: "✈️",
@@ -101,6 +103,8 @@ export default function TodayCard({
 
   const here = state.current;
   const essentials = here ? essentialsFor(here.state.id) : undefined;
+  // Where today's move lands, so "navigate" can point at a real place.
+  const arrivingAt = state.todayLeg ? plan.stops.find((s) => s.arrivalLeg === state.todayLeg) : undefined;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-card">
@@ -134,6 +138,39 @@ export default function TodayCard({
       </div>
 
       <div className="flex flex-col gap-4 p-5">
+        {/* Moving today: one tap to turn-by-turn, or to flights for a leg no road map can draw. */}
+        {state.todayLeg && arrivingAt && (
+          <div className="flex flex-wrap gap-2" data-today-nav>
+            {isDrivable(state.todayLeg.mode) ? (
+              <a
+                href={directionsFromHereUrl(placeQuery(arrivingAt.destination), googleModeFor(state.todayLeg.mode))}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg bg-coral-500 px-4 py-2 text-sm font-semibold text-white hover:bg-coral-600"
+              >
+                🧭 Navigate to {arrivingAt.destination.name}
+              </a>
+            ) : (
+              <a
+                href={flightsUrl(state.todayLeg.fromName, arrivingAt.destination.district || arrivingAt.destination.name)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg bg-coral-500 px-4 py-2 text-sm font-semibold text-white hover:bg-coral-600"
+              >
+                ✈️ Flights to {arrivingAt.destination.name}
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* At a place: get there, and find what you need around it. */}
+        {here && !state.todayLeg && (
+          <div className="flex flex-col gap-2" data-today-nav>
+            <MapButtons query={placeQuery(here.destination)} compact />
+            {!compact && <NearbyChips place={placeQuery(here.destination)} />}
+          </div>
+        )}
+
         {/* On a day at a place, the useful thing is how to spend it. */}
         {here && !state.todayLeg && !compact && (
           <DayShapeCard destination={here.destination} month={trip.travelMonth} compact />

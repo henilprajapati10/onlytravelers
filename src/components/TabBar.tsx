@@ -12,7 +12,7 @@ const TABS = [
     href: "/destinations",
     label: "Explore",
     icon: "🗺️",
-    match: (p: string) => p.startsWith("/destinations") || p.startsWith("/states") || p.startsWith("/circuits"),
+    match: (p: string) => p.startsWith("/destinations") || p.startsWith("/states") || p.startsWith("/circuits") || p.startsWith("/map"),
   },
   { href: "/trips", label: "Trips", icon: "🎒", match: (p: string) => p.startsWith("/trips") || p.startsWith("/trip") },
   { href: "#search", label: "Search", icon: "🔎", match: () => false },

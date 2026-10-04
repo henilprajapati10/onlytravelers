@@ -374,6 +374,64 @@ for (const icon of ["/icon-192.png", "/icon-512.png", "/icon-maskable.png"]) {
 const sw = await page.goto(B + "/sw.js");
 ok("service worker served", sw.status() === 200);
 
+/* ---------- Google Maps ---------- */
+{
+  const q = (sel) => page.locator(sel);
+  const gUrl = async (sel) => new URL(await q(sel).first().getAttribute("href"));
+
+  await page.goto(B + "/destinations/hampi-unesco", { waitUntil: "networkidle" });
+  const embed = await q("iframe[data-google-map]").first().getAttribute("src");
+  ok("destination page embeds a Google Map", embed.startsWith("https://www.google.com/maps") && embed.includes("Hampi"), embed.slice(0, 80));
+  const dir = await gUrl("[data-maps-directions]");
+  ok("Directions start from the traveller's position", dir.pathname === "/maps/dir/" && !dir.searchParams.has("origin") && dir.searchParams.get("destination").includes("Karnataka"));
+  ok("map links open outside the app", (await q("[data-maps-open]").first().getAttribute("target")) === "_blank");
+  ok("nearby essentials are one tap away", (await q("[data-nearby]").count()) >= 8);
+  ok("destination links to the big map", (await q("a[href='/map?place=hampi-unesco']").count()) === 1);
+
+  await page.goto(B + "/states/kerala", { waitUntil: "networkidle" });
+  ok("state page embeds a Google Map of the state", (await q("iframe[data-google-map]").first().getAttribute("src")).includes("Kerala"));
+
+  await page.goto(B + "/map?place=hampi-unesco", { waitUntil: "networkidle" });
+  ok("the big map opens on the linked place", (await q("[data-map-title]").innerText()) === (await q("[data-map-place='hampi-unesco'] span.block").first().innerText()));
+  await page.selectOption("select[aria-label='State or union territory']", "rajasthan");
+  await page.waitForURL("**/map?state=rajasthan", { timeout: 10000 });
+  ok("picking a state narrows the map", (await q("[data-map-title]").innerText()) === "Rajasthan");
+  await page.fill("input[aria-label='Filter places']", "fort");
+  await page.waitForTimeout(300);
+  const firstPlace = await q("[data-map-place]").first().getAttribute("data-map-place");
+  await q("[data-map-place]").first().click();
+  await page.waitForURL(`**/map?state=rajasthan&place=${firstPlace}`, { timeout: 10000 });
+  ok("picking a place moves the map to it", (await q("iframe[data-google-map]").first().getAttribute("src")).includes("Rajasthan"));
+
+  await page.evaluate(() => {
+    const now = new Date().toISOString();
+    localStorage.setItem("onlytravelers.trips.v1", JSON.stringify([{ id: "trip_mapcheck", name: "Coast and islands", status: "planning", createdAt: now, updatedAt: now,
+      slugs: ["baga-calangute-anjuna", "palolem-agonda", "radhanagar-beach-havelock", "neil-island-shaheed-dweep"] }]));
+    localStorage.setItem("onlytravelers.activeTrip.v1", JSON.stringify("trip_mapcheck"));
+  });
+  await page.goto(B + "/trips/trip_mapcheck?tab=map", { waitUntil: "networkidle" });
+  await page.waitForTimeout(400);
+  ok("the trip has a Map tab", (await q("[data-trip-map]").count()) === 1);
+  ok("the trip map embeds a route", (await q("iframe[data-google-map]").first().getAttribute("src")).includes("saddr="));
+  ok("every move gets a link", (await q("[data-leg-link]").count()) === 3);
+  ok("the flight leg links to flights", (await q("[data-leg-link='flights']").count()) >= 1);
+  const route = await gUrl("[data-open-route]");
+  ok("navigate opens the route in Google Maps", route.pathname === "/maps/dir/" && route.searchParams.get("origin").startsWith("Baga"));
+  await q("[data-map-stop='palolem-agonda']").click();
+  await page.waitForTimeout(400);
+  ok("tapping a stop shows it with what is around it",
+     (await q("iframe[data-google-map]").first().getAttribute("src")).includes("Palolem") && (await q("[data-nearby]").count()) === 8);
+
+  await page.evaluate(() => {
+    const t = JSON.parse(localStorage.getItem("onlytravelers.trips.v1"));
+    t[0].startDate = new Date().toISOString().slice(0, 10);
+    localStorage.setItem("onlytravelers.trips.v1", JSON.stringify(t));
+  });
+  await page.goto(B + "/trips/trip_mapcheck?tab=today", { waitUntil: "networkidle" });
+  await page.waitForTimeout(400);
+  ok("Today offers navigation", (await q("[data-today-nav] a").count()) > 0);
+}
+
 /* ---------- mobile shell ---------- */
 const m = await ctx.newPage();
 await m.setViewportSize({ width: 390, height: 844 });
@@ -382,7 +440,7 @@ await m.waitForTimeout(500);
 ok("tab bar visible on phone", await m.locator("nav[aria-label='Main']").isVisible());
 const tabs = await m.locator("nav[aria-label='Main'] a").count();
 ok("five tabs", tabs === 5, `${tabs}`);
-for (const path of ["/", "/trips", "/profile", "/destinations"]) {
+for (const path of ["/", "/trips", "/profile", "/destinations", "/map", "/destinations/hampi-unesco", "/trips/trip_mapcheck?tab=map"]) {
   await m.goto(B + path, { waitUntil: "networkidle" });
   await m.waitForTimeout(300);
   const overflow = await m.evaluate(

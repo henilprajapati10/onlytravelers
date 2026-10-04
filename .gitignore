@@ -5,3 +5,6 @@ out
 *.log
 .env*.local
 tsconfig.tsbuildinfo
+
+# Built by `npm run build:app`; copied into android/ and ios/ by `cap sync`.
+mobile/www

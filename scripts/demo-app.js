@@ -16,6 +16,12 @@
   const { swapReport, swapReasonLabel } = OT.alternatives;
   const { buildResponsibleNotes, groupResponsible } = OT.responsible;
   const { shapeForDestination } = OT.dayshape;
+  const M = OT.maps;
+  /* Inside the native app (capacitor.config.json) there is no address bar to
+     share and no download folder: links point at the website, files become
+     copyable text. */
+  const APP = Boolean(window.OT_CONFIG && window.OT_CONFIG.app);
+  const SITE_URL = ((window.OT_CONFIG && window.OT_CONFIG.siteUrl) || "").replace(/\/$/, "");
 
   const bySlug = (s) => destinations.find((d) => d.slug === s);
   const esc = (s) =>
@@ -147,7 +153,7 @@
 
   const TAB_MATCH = {
     home: (v) => v === "home",
-    explore: (v) => ["destinations", "detail", "states", "state", "circuits", "festivals"].indexOf(v) !== -1,
+    explore: (v) => ["destinations", "detail", "states", "state", "circuits", "festivals", "map"].indexOf(v) !== -1,
     trips: (v) => ["trips", "workspace", "trip", "cart"].indexOf(v) !== -1,
     profile: (v) => v === "profile",
     search: () => false,
@@ -236,6 +242,171 @@
       <circle cx="${px}" cy="${py}" r="6" fill="#e8492a" stroke="#fff" stroke-width="2"/>
       <text x="${right ? px - 10 : px + 10}" y="${py + 4}" text-anchor="${right ? "end" : "start"}" font-size="11" font-weight="600" fill="#0b1b30">${esc(st.capital)}</text>
     </svg>`;
+  }
+
+  /* ---------- Google Maps ----------
+     Same module as the app (src/lib/maps.ts): places go to Google by name,
+     never by a coordinate we would have had to invent. */
+  const MAPS_KEY = (window.OT_CONFIG && window.OT_CONFIG.googleMapsKey) || undefined;
+  const LEG_ICON = { Flight: "✈️", "Ferry or flight": "⛴️", Road: "🚗", "Walk / local transport": "🚶", "Train or road": "🚆" };
+  const EXT = 'target="_blank" rel="noopener noreferrer"';
+
+  /** An embedded map that says so when there is no signal, instead of a grey box. */
+  function gmap(src, title, openUrl, cls, fallback) {
+    if (!navigator.onLine) {
+      return `<div class="flex w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-lg surface-alt p-4 text-center ${cls}">
+        ${fallback || ""}
+        <p class="text-xs txt-muted">No signal, so no live map. The Google Maps app still works if you saved this area offline.</p>
+        <a ${EXT} href="${esc(openUrl)}" class="rounded-lg border bd surface px-3 py-1.5 text-xs font-semibold txt">Open in Google Maps</a>
+      </div>`;
+    }
+    return `<iframe src="${esc(src)}" title="${esc(title)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen data-google-map class="w-full rounded-lg border-0 surface-alt ${cls}"></iframe>`;
+  }
+
+  function mapButtons(query, compact) {
+    const size = compact ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm";
+    return `<div class="flex flex-wrap gap-2">
+      <a ${EXT} href="${esc(M.directionsFromHereUrl(query))}" data-maps-directions class="rounded-lg bg-accent font-semibold ${size}">🧭 Directions</a>
+      <a ${EXT} href="${esc(M.mapsSearchUrl(query))}" data-maps-open class="rounded-lg border bd surface font-semibold txt ${size}">📍 Open in Google Maps</a>
+    </div>`;
+  }
+
+  function nearbyChips(place) {
+    return `<ul class="flex flex-wrap gap-1.5" aria-label="Find near ${esc(place)}">${M.NEARBY_KINDS.map(
+      (k) => `<li><a ${EXT} href="${esc(M.nearbyUrl(k, place))}" data-nearby="${k.id}" class="inline-flex items-center gap-1 rounded-full border bd surface px-2.5 py-1 text-xs font-medium txt-muted"><span aria-hidden="true">${k.icon}</span>${esc(k.label)}</a></li>`
+    ).join("")}</ul>`;
+  }
+
+  /* The trip's Map tab remembers what it is showing, per trip. */
+  const mapFocus = {};
+
+  function mapBody(trip, plan) {
+    const segments = M.routeSegments(plan);
+    const legs = M.mapLegs(plan);
+    let focus = mapFocus[trip.id];
+    if (!focus || (focus.kind === "segment" && !segments[focus.index]) || (focus.kind === "stop" && !plan.stops.some((s) => s.destination.slug === focus.slug))) {
+      focus = segments.length ? { kind: "segment", index: 0 } : { kind: "stop", slug: plan.stops[0].destination.slug };
+    }
+    const segment = focus.kind === "segment" ? segments[focus.index] : null;
+    const stop = (focus.kind === "stop" && plan.stops.find((s) => s.destination.slug === focus.slug)) || plan.stops[0];
+    const src = segment ? M.embedRouteUrl(segment.queries, MAPS_KEY) : M.embedPlaceUrl(M.placeQuery(stop.destination), MAPS_KEY);
+    const openUrl = segment ? segment.url : M.mapsSearchUrl(M.placeQuery(stop.destination));
+    const seaOrAir = legs.some((l) => !l.drivable);
+    const last = (seg) => seg.names[seg.names.length - 1];
+
+    return `<div class="flex flex-col gap-6" data-trip-map>
+      <section class="rounded-2xl border bd surface p-4 shadow-card">
+        ${segments.length > 1 ? `<div class="mb-3 flex flex-wrap gap-2" role="group" aria-label="Route parts">${segments.map((seg, i) => {
+          const on = segment && focus.index === i;
+          return `<button type="button" data-map-part="${i}" aria-pressed="${on ? "true" : "false"}" class="rounded-full px-3 py-1.5 text-xs font-semibold ${on ? "text-white" : "border bd txt-muted"}" ${on ? 'style="background:#0b1b30"' : ""}>Part ${i + 1}: ${esc(seg.names[0])} → ${esc(last(seg))}</button>`;
+        }).join("")}</div>` : ""}
+        ${gmap(src, segment ? `Route from ${segment.names[0]} to ${last(segment)}` : `Google Map of ${stop.destination.name}`, openUrl, "aspect-[4/3] sm:aspect-[16/9]")}
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p class="text-sm txt-muted">${segment ? segment.names.map(esc).join(" → ") : `${esc(stop.destination.name)}, ${esc(stop.state.name)}`}</p>
+          <a ${EXT} href="${esc(openUrl)}" data-open-route class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold">${segment ? "Navigate this route in Google Maps" : "Open in Google Maps"}</a>
+        </div>
+        <p class="mt-2 text-xs txt-faint">${seaOrAir ? "The road map breaks where you fly or sail — those legs link to flights instead. " : ""}${esc(M.PIN_NOTE)}</p>
+      </section>
+
+      ${legs.length ? `<section>
+        <h2 class="font-display text-sm font-semibold uppercase tracking-wide txt-faint">Every move</h2>
+        <ol class="mt-3 flex flex-col gap-2">${legs.map((l) => `
+          <li class="flex flex-wrap items-center justify-between gap-3 rounded-xl border bd surface p-3">
+            <span class="min-w-0 text-sm txt"><span aria-hidden="true">${LEG_ICON[l.mode] || "🚆"}</span> ${esc(l.fromName)} → ${esc(l.toName)}
+              <span class="block text-xs txt-faint">${esc(l.mode)}${l.approxKm ? ` · ~${l.approxKm.toLocaleString("en-IN")} km as the crow flies` : ""}</span></span>
+            <a ${EXT} href="${esc(l.url)}" data-leg-link="${l.drivable ? "directions" : "flights"}" class="shrink-0 rounded-lg border bd px-3 py-1.5 text-xs font-semibold txt">${l.drivable ? "🧭" : "✈️"} ${esc(l.urlLabel)}</a>
+          </li>`).join("")}</ol>
+      </section>` : ""}
+
+      <section>
+        <h2 class="font-display text-sm font-semibold uppercase tracking-wide txt-faint">Stops</h2>
+        <ol class="mt-3 flex flex-col gap-2">${plan.stops.map((s, i) => {
+          const on = focus.kind === "stop" && focus.slug === s.destination.slug;
+          const q = M.placeQuery(s.destination);
+          return `<li class="rounded-xl border surface p-4 ${on ? "border-coral-300" : "bd"}">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <button type="button" data-map-stop="${esc(s.destination.slug)}" class="min-w-0 text-left">
+                <span class="font-display font-semibold txt">${i + 1}. ${esc(s.destination.name)}</span>
+                <span class="block text-xs txt-faint">${esc(s.destination.district)}, ${esc(s.state.name)} · ${formatDays(s.destination.idealDays)} · show on map</span>
+              </button>
+              ${mapButtons(q, true)}
+            </div>
+            ${on ? `<div class="mt-3">${nearbyChips(q)}</div>` : ""}
+          </li>`;
+        }).join("")}</ol>
+      </section>
+    </div>`;
+  }
+
+  /* ---------- explore on the map ---------- */
+  const mapFilter = { q: "" };
+
+  function mapListHtml(stateId, placeSlug) {
+    const q = mapFilter.q.trim().toLowerCase();
+    const list = destinations.filter((d) => {
+      if (stateId && d.stateId !== stateId) return false;
+      if (!q) return true;
+      return d.name.toLowerCase().includes(q) || d.district.toLowerCase().includes(q) || d.themes.some((t) => t.toLowerCase().includes(q));
+    });
+    const st = stateId ? getState(stateId) : null;
+    return `<p class="text-xs txt-faint">${list.length} ${list.length === 1 ? "place" : "places"}${st ? ` in ${esc(st.name)}` : ""}</p>
+      <ul class="mt-2 max-h-[22rem] overflow-y-auto rounded-xl border bd surface lg:max-h-[30rem]" data-map-list>
+        ${list.slice(0, 120).map((d) => {
+          const on = d.slug === placeSlug;
+          return `<li class="border-b bd last:border-0"><a href="#/map?state=${d.stateId}&place=${d.slug}" data-map-place="${d.slug}" aria-current="${on ? "true" : "false"}" class="flex items-center gap-3 px-3 py-2.5 text-sm ${on ? "surface-alt" : ""}">
+            <span aria-hidden="true">${themeEmoji[d.themes[0]]}</span>
+            <span class="min-w-0 flex-1"><span class="block truncate font-semibold ${on ? "accent" : "txt"}">${esc(d.name)}</span><span class="block truncate text-xs txt-faint">${esc(d.district)}, ${esc(d.stateName)}</span></span>
+          </a></li>`;
+        }).join("")}
+        ${list.length > 120 ? '<li class="px-3 py-2.5 text-xs txt-faint">Pick a state or filter to see the rest.</li>' : ""}
+        ${list.length === 0 ? '<li class="px-3 py-6 text-center text-sm txt-faint">Nothing matches.</li>' : ""}
+      </ul>`;
+  }
+
+  function mapView(stateId, placeSlug) {
+    const place = placeSlug ? bySlug(placeSlug) : null;
+    const st = getState(stateId || "") || (place ? getState(place.stateId) : null);
+    const query = place ? M.placeQuery(place) : st ? M.stateQuery(st) : "India";
+    const title = place ? place.name : st ? st.name : "India";
+    const trip = activeTrip();
+    return `
+    <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 class="font-display text-3xl font-bold txt">Explore on the map</h1>
+          <p class="mt-1 txt-muted">Every destination on Google Maps, with directions and what is around it.</p>
+        </div>
+        ${trip && trip.slugs.length > 1 ? `<a href="#/trips/${trip.id}?tab=map" class="rounded-lg border bd surface px-4 py-2 text-sm font-semibold txt">🧭 ${esc(trip.name)} on the map</a>` : ""}
+      </div>
+      <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <div class="flex min-w-0 flex-col gap-3 lg:col-span-2">
+          <label class="text-sm font-semibold txt">State or union territory
+            <select id="map-state" aria-label="State or union territory" class="mt-1 w-full rounded-lg border bd px-3 py-2 text-sm">
+              <option value="">All of India</option>
+              ${states.map((s) => `<option value="${s.id}"${st && st.id === s.id ? " selected" : ""}>${esc(s.name)}</option>`).join("")}
+            </select>
+          </label>
+          <input id="map-q" type="search" value="${esc(mapFilter.q)}" placeholder="Filter by name, district or theme" aria-label="Filter places" class="rounded-lg border bd px-3 py-2 text-sm"/>
+          <div id="map-list-box">${mapListHtml(st ? st.id : "", place ? place.slug : "")}</div>
+        </div>
+        <div class="flex min-w-0 flex-col gap-4 lg:col-span-3">
+          ${gmap(M.embedPlaceUrl(query, MAPS_KEY), `Google Map of ${title}`, M.mapsSearchUrl(query), "aspect-[4/3]")}
+          <div class="rounded-2xl border bd surface p-5 shadow-card">
+            <h2 class="font-display text-xl font-semibold txt" data-map-title>${esc(title)}</h2>
+            ${place ? `
+              <p class="mt-1 text-sm txt-muted">${esc(place.district)}, ${esc(place.stateName)} · ${formatDays(place.idealDays)} · best ${esc(place.bestMonthsLabel)}</p>
+              <div class="mt-4 flex flex-wrap gap-2">${mapButtons(query)}${bagButton(place.slug, "")}<a href="#/destinations/${place.slug}" class="rounded-lg border bd surface px-4 py-2 text-sm font-semibold txt">Read the guide</a></div>
+              <p class="mb-2 mt-5 text-xs font-semibold uppercase tracking-wide txt-faint">Find nearby</p>
+              ${nearbyChips(query)}
+              <p class="mt-3 text-xs txt-faint">${esc(M.PIN_NOTE)}</p>`
+            : st ? `
+              <p class="mt-1 text-sm txt-muted">${esc(st.positioning)}</p>
+              <div class="mt-4 flex flex-wrap gap-2">${mapButtons(query)}<a href="#/states/${st.id}" class="rounded-lg border bd surface px-4 py-2 text-sm font-semibold txt">About ${esc(st.name)}</a></div>`
+            : `<p class="mt-1 text-sm txt-muted">Pick a state, then a place, to see it here — or filter the list by what you are after.</p>`}
+          </div>
+        </div>
+      </div>
+    </div>`;
   }
 
   /* ---------- views ---------- */
@@ -481,6 +652,10 @@
                 .join("")}
             </dl>
 
+            <h3 class="mt-8 font-display text-sm font-semibold uppercase tracking-wide txt-faint">Find near ${esc(d.name)}</h3>
+            <p class="mb-2 mt-1 text-sm txt-muted">Opens Google Maps searched around the place — what is open and how far is live there, not guessed here.</p>
+            ${nearbyChips(M.placeQuery(d))}
+
             ${d.permitRequired ? `<div class="mt-6 rounded-xl border-l-4 p-4" style="border-color:#e8492a;background:rgba(232,73,42,.09)"><h4 class="font-display text-sm font-bold accent">Permit required</h4><p class="mt-1 text-sm txt-muted">An Inner Line Permit must be arranged in advance through a registered agent or the state portal — it is not issued on arrival, and you will be turned back at the checkpost without one.</p></div>` : ""}
             ${d.ferryOrFlightOnly ? `<div class="mt-4 rounded-xl border-l-4 p-4" style="border-color:#0ea5e9;background:rgba(14,165,233,.1)"><h4 class="font-display text-sm font-bold" style="color:#0369a1">Ferry and flight constrained</h4><p class="mt-1 text-sm txt-muted">Sailings and island flights are limited and fill early. Lock transport before booking a room, not after.</p></div>` : ""}
             ${d.monsoonProduct ? `<div class="mt-4 rounded-xl border-l-4 p-4" style="border-color:#10b981;background:rgba(16,185,129,.1)"><h4 class="font-display text-sm font-bold" style="color:#047857">A monsoon destination</h4><p class="mt-1 text-sm txt-muted">At its best in the rains, when most of the country is off-season. Go between June and September and you get it at full force.</p></div>` : ""}
@@ -504,10 +679,14 @@
                 ${bagButton(d.slug, "mt-4 w-full", true)}
                 <a href="#/trip" class="mt-3 block text-center text-sm font-semibold accent">Go to my trip →</a>
               </div>
-              <div class="rounded-2xl border bd surface p-4 shadow-card">
-                <h3 class="mb-2 font-display text-xs font-semibold uppercase tracking-wide txt-faint">Where it is</h3>
-                ${stateMap(st.id)}
-                <p class="mt-2 text-xs txt-faint">${esc(d.district)}, ${esc(st.name)}. Pin marks the state travel hub.</p>
+              <div id="map" class="rounded-2xl border bd surface p-4 shadow-card">
+                <div class="mb-2 flex items-center justify-between gap-2">
+                  <h3 class="font-display text-xs font-semibold uppercase tracking-wide txt-faint">Where it is</h3>
+                  <a href="#/map?state=${st.id}&place=${d.slug}" class="text-xs font-semibold accent">Big map →</a>
+                </div>
+                ${gmap(M.embedPlaceUrl(M.placeQuery(d), MAPS_KEY), `Google Map of ${d.name}`, M.mapsSearchUrl(M.placeQuery(d)), "aspect-square", `<div class="w-2/3">${stateMap(st.id)}</div>`)}
+                <div class="mt-3">${mapButtons(M.placeQuery(d), true)}</div>
+                <p class="mt-2 text-xs txt-faint">${esc(d.district)}, ${esc(st.name)}. ${esc(M.PIN_NOTE)}</p>
               </div>
             </div>
           </aside>
@@ -586,7 +765,14 @@
               </div>
               ${st.routingNote ? `<p class="mt-3 rounded-lg border-l-4 bd surface-alt p-3 text-sm txt-muted"><strong>Routing note:</strong> best travelled as part of ${esc(st.routingNote)}, not as a standalone trip.</p>` : ""}
             </div>
-            <div>${stateMap(st.id)}<p class="mt-2 text-center text-xs txt-faint">${esc(st.capital)} · ${st.lat.toFixed(2)}°N, ${st.lng.toFixed(2)}°E</p></div>
+            <div>
+              ${gmap(M.embedPlaceUrl(M.stateQuery(st), MAPS_KEY), `Google Map of ${st.name}`, M.mapsSearchUrl(M.stateQuery(st)), "aspect-square", `<div class="w-2/3">${stateMap(st.id)}</div>`)}
+              <p class="mt-2 text-center text-xs txt-faint">${esc(st.capital)} · ${st.lat.toFixed(2)}°N, ${st.lng.toFixed(2)}°E</p>
+              <div class="mt-3 flex flex-wrap items-center justify-center gap-2">
+                ${mapButtons(M.stateQuery(st), true)}
+                <a href="#/map?state=${st.id}" class="rounded-lg border bd surface px-3 py-1.5 text-xs font-semibold txt">🗺️ Every stop on the map</a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -663,6 +849,8 @@
    * anything it will not take is shown as copyable text instead.
    */
   async function saveFile(filename, contents, mime) {
+    // A WebView drops anchor downloads silently; copyable text always works.
+    if (APP) return showCopyPanel(filename, contents);
     const dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
     if (!dl) {
       if (window.claude && window.claude.use) return showCopyPanel(filename, contents);
@@ -754,7 +942,7 @@
         </div>
         <div class="flex flex-wrap gap-2">
           <button type="button" data-share class="rounded-lg border bd surface px-3 py-2 text-sm font-semibold txt">Share link</button>
-          <button type="button" data-print class="rounded-lg border bd surface px-3 py-2 text-sm font-semibold txt">Print</button>
+          ${APP ? "" : `<button type="button" data-print class="rounded-lg border bd surface px-3 py-2 text-sm font-semibold txt">Print</button>`}
           <button type="button" data-export="txt" class="rounded-lg border bd surface px-3 py-2 text-sm font-semibold txt">Text</button>
           <button type="button" data-export="ics" class="rounded-lg border bd surface px-3 py-2 text-sm font-semibold txt">Calendar</button>
         </div>
@@ -973,6 +1161,7 @@
   const WORK_TABS = [
     { id: "today", label: "Today", icon: "📍" },
     { id: "itinerary", label: "Itinerary", icon: "🗓️" },
+    { id: "map", label: "Map", icon: "🗺️" },
     { id: "respect", label: "Respect", icon: "🤝" },
     { id: "prep", label: "Prep", icon: "✅" },
     { id: "bookings", label: "Bookings", icon: "🎫" },
@@ -1045,6 +1234,7 @@
     if (tab === "today") body = todayBody(trip, plan);
     else if (tab === "respect") body = respectBody(trip, plan);
     else if (tab === "itinerary") body = tripBody(trip, plan);
+    else if (tab === "map") body = mapBody(trip, plan);
     else if (tab === "prep") body = prepBody(trip, prepItems, ticked);
     else if (tab === "bookings") body = bookingsBody(trip, bookingTasks);
     else body = spendBody(trip, plan);
@@ -1082,6 +1272,15 @@
     const cur = state.current;
     const ess = cur ? essentialsFor(cur.state.id) : null;
     const shape = cur && !state.todayLeg ? dayShapeCard(cur.destination, trip.travelMonth, true) : "";
+    // Where today's move lands, so "navigate" points at a real place.
+    const arriving = state.todayLeg ? plan.stops.find((s) => s.arrivalLeg === state.todayLeg) : null;
+    const nav = arriving
+      ? `<div class="mt-4 flex flex-wrap gap-2" data-today-nav>${M.isDrivable(state.todayLeg.mode)
+          ? `<a ${EXT} href="${esc(M.directionsFromHereUrl(M.placeQuery(arriving.destination), M.googleModeFor(state.todayLeg.mode)))}" class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold">🧭 Navigate to ${esc(arriving.destination.name)}</a>`
+          : `<a ${EXT} href="${esc(M.flightsUrl(state.todayLeg.fromName, arriving.destination.district || arriving.destination.name))}" class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold">✈️ Flights to ${esc(arriving.destination.name)}</a>`}</div>`
+      : cur
+        ? `<div class="mt-4 flex flex-col gap-2" data-today-nav>${mapButtons(M.placeQuery(cur.destination), true)}${nearbyChips(M.placeQuery(cur.destination))}</div>`
+        : "";
     return `
       <div class="rounded-2xl border bd surface p-5 shadow-card">
         <p class="text-xs font-semibold uppercase tracking-wide accent">Day ${state.dayNumber} of ${plan.totalDays}</p>
@@ -1092,6 +1291,7 @@
             ? `<h2 class="font-display mt-1 text-xl font-semibold txt">${esc(cur.destination.name)}</h2>
                <p class="mt-1 text-sm txt-muted">${esc(cur.destination.district)}, ${esc(cur.state.name)} · ${esc(cur.destination.rawTheme)}</p>`
             : ""}
+        ${nav}
       </div>
 
       ${shape ? `<div class="mt-4">${shape}</div>` : ""}
@@ -1588,6 +1788,7 @@
     if (parts[0] === "circuits") return { view: "circuits" };
     if (parts[0] === "profile") return { view: "profile" };
     if (parts[0] === "campaign") return { view: "campaign" };
+    if (parts[0] === "map") return { view: "map", state: params.get("state"), place: params.get("place") };
     return { view: "home" };
   }
 
@@ -1619,6 +1820,7 @@
     else if (r.view === "workspace") html = workspaceView(r.id, r.tab);
     else if (r.view === "profile") html = profileView();
     else if (r.view === "campaign") html = campaignView();
+    else if (r.view === "map") html = mapView(r.state, r.place);
 
     document.getElementById("app").innerHTML = html;
     document.querySelectorAll(".nav-link").forEach((a) => {
@@ -1819,6 +2021,10 @@
       return;
     }
 
+    const part = e.target.closest("[data-map-part]");
+    if (part) { mapFocus[route().id] = { kind: "segment", index: Number(part.dataset.mapPart) }; render(false); return; }
+    const mstop = e.target.closest("[data-map-stop]");
+    if (mstop) { mapFocus[route().id] = { kind: "stop", slug: mstop.dataset.mapStop }; render(false); return; }
     const t = e.target.closest("[data-toggle]");
     if (t) { e.preventDefault(); toggle(t.dataset.toggle); return; }
     const rm = e.target.closest("[data-remove]");
@@ -1855,7 +2061,13 @@
     const shareBtn = e.target.closest("[data-share]");
     if (shareBtn) {
       e.preventDefault();
-      const url = location.origin + location.pathname + "#/trip?bag=" + cart.join(",");
+      if (APP && !SITE_URL) {
+        // The app's own address means nothing to anyone else, so share the plan itself.
+        const plan = buildTrip(cartItems());
+        if (plan) showCopyPanel("onlytravelers-itinerary.txt", tripToText(plan));
+        return;
+      }
+      const url = APP ? tripShareUrl(cart, SITE_URL) : location.origin + location.pathname + "#/trip?bag=" + cart.join(",");
       const done = () => { shareBtn.textContent = "Link copied ✓"; setTimeout(() => { shareBtn.textContent = "Share link"; }, 2000); };
       if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, () => window.prompt("Copy your trip link:", url));
       else window.prompt("Copy your trip link:", url);
@@ -1977,6 +2189,14 @@
 
   document.addEventListener("input", (e) => {
     if (e.target.id === "f-q") { filters.q = e.target.value; filters.visible = 24; updateGrid(); return; }
+    // The map list updates in place so the filter keeps focus while typing.
+    if (e.target.id === "map-q") {
+      mapFilter.q = e.target.value;
+      const r = route();
+      const box = document.getElementById("map-list-box");
+      if (box) box.innerHTML = mapListHtml(getState(r.state || "") ? r.state : (bySlug(r.place || "") || {}).stateId || "", r.place || "");
+      return;
+    }
     // Saved without re-rendering, or the field would lose focus mid-word.
     if (e.target.dataset && e.target.dataset.walletRef) {
       saveWallet(route().id, e.target.dataset.walletRef, { reference: e.target.value });
@@ -2028,6 +2248,10 @@
       render(false);
       return;
     }
+    if (id === "map-state") {
+      location.hash = e.target.value ? "#/map?state=" + e.target.value : "#/map";
+      return;
+    }
     if (id === "p-budget") { planner.budget = Number(e.target.value); render(false); return; }
     if (id === "f-zone") { filters.zone = e.target.value; filters.state = "All"; filters.visible = 24; render(false); return; }
     if (id === "f-state") filters.state = e.target.value;
@@ -2040,5 +2264,8 @@
   });
 
   window.addEventListener("hashchange", () => render(true));
+  // Maps swap between live and the no-signal panel as the connection comes and goes.
+  window.addEventListener("online", () => render(false));
+  window.addEventListener("offline", () => render(false));
   render(true);
 })();

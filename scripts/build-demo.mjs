@@ -5,7 +5,20 @@
  * same artwork generator — compiled with sucrase and wired through a tiny
  * module registry, so the demo cannot drift from the product.
  *
- *   node scripts/build-demo.mjs <output.html>
+ *   node scripts/build-demo.mjs [<output.html>]
+ *   node scripts/build-demo.mjs --app [<output.html>]
+ *
+ * --app builds the native app's web bundle (see capacitor.config.json): a
+ * complete HTML document with the preview banner removed, written to
+ * mobile/www/index.html by default.
+ *
+ * SITE_URL (or NEXT_PUBLIC_SITE_URL) is where the app's share links point —
+ * the deployed website. Without it the app shares the itinerary as text.
+ *
+ * GOOGLE_MAPS_API_KEY, when set, is baked in for the Maps Embed API. Without
+ * it the maps use Google's keyless embed, which is what the committed demo
+ * ships with — a key in a committed file should be one restricted to your
+ * own referrers and app.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -18,7 +31,14 @@ const require = createRequire(import.meta.url);
 const { transform } = require("sucrase");
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const outFile = process.argv[2] ?? path.join(root, "demo", "index.html");
+const args = process.argv.slice(2);
+const appMode = args.includes("--app");
+const outArg = args.find((a) => !a.startsWith("--"));
+const outFile = outArg
+  ? path.resolve(outArg)
+  : appMode
+    ? path.join(root, "mobile", "www", "index.html")
+    : path.join(root, "demo", "index.html");
 
 const MODULES = [
   "src/data/states.ts",
@@ -52,6 +72,7 @@ const MODULES = [
   "src/lib/alternatives.ts",
   "src/lib/responsible.ts",
   "src/lib/dayshape.ts",
+  "src/lib/maps.ts",
 ];
 
 /** "src/data/guides/index.ts" -> canonical id "@/data/guides" */
@@ -131,6 +152,7 @@ ${registry}
     alternatives: __req("@/lib/alternatives"),
     responsible: __req("@/lib/responsible"),
     dayshape: __req("@/lib/dayshape"),
+    maps: __req("@/lib/maps"),
   };
 })();
 `;
@@ -155,13 +177,43 @@ execFileSync(
 );
 const css = fs.readFileSync(cssFile, "utf8");
 
-const html = shell
+const config = {
+  googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || "",
+  app: appMode,
+  // Where the app's share links point: the deployed website's /trip?bag= page.
+  siteUrl: appMode ? process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "" : "",
+};
+
+let html = shell
   .replace("/*__CSS__*/", () => css)
+  .replace("//__CONFIG__", () => `window.OT_CONFIG = ${JSON.stringify(config)};`)
   .replace("//__RUNTIME__", () => runtime)
   .replace("//__APP__", () => ui);
+
+if (appMode) {
+  // The app is the product, not a preview of it.
+  html = html.replace(/<!--preview-->[\s\S]*?<!--\/preview-->/g, "");
+  // The demo shell is a fragment (its host supplies the document); a WebView needs the whole thing.
+  html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1b30">
+<meta name="format-detection" content="telephone=no">
+${html.slice(0, html.indexOf("<div class=\"flex min-h-screen flex-col\">"))}
+</head>
+<body>
+${html.slice(html.indexOf("<div class=\"flex min-h-screen flex-col\">"))}
+</body>
+</html>
+`;
+} else {
+  html = html.replace(/<!--\/?preview-->/g, "");
+}
 
 fs.mkdirSync(path.dirname(outFile), { recursive: true });
 fs.writeFileSync(outFile, html);
 
 const kb = (fs.statSync(outFile).size / 1024).toFixed(0);
-console.log(`built ${outFile} (${kb} KB) from ${compiled.length} modules`);
+console.log(`built ${outFile} (${kb} KB) from ${compiled.length} modules${appMode ? " [app]" : ""}`);

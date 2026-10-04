@@ -35,12 +35,14 @@ import ResponsibleList from "./ResponsibleList";
 import FestivalList from "./FestivalList";
 import TripItinerary from "./TripItinerary";
 import TodayCard from "./TodayCard";
+import TripMap from "./TripMap";
 
-type Tab = "today" | "itinerary" | "respect" | "prep" | "bookings" | "spend";
+type Tab = "today" | "itinerary" | "map" | "respect" | "prep" | "bookings" | "spend";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "today", label: "Today", icon: "📍" },
   { id: "itinerary", label: "Itinerary", icon: "🗓️" },
+  { id: "map", label: "Map", icon: "🗺️" },
   { id: "respect", label: "Respect", icon: "🤝" },
   { id: "prep", label: "Prep", icon: "✅" },
   { id: "bookings", label: "Bookings", icon: "🎫" },
@@ -331,6 +333,8 @@ export default function TripWorkspace() {
               )}
             </div>
           )}
+
+          {tab === "map" && plan && <TripMap plan={plan} />}
 
           {/* ---------- Respect ---------- */}
           {tab === "respect" && plan && (

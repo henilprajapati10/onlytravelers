@@ -4,6 +4,10 @@ import { states, getState } from "@/data/states";
 import { destinationsInState } from "@/data/destinations";
 import DestinationCard from "@/components/DestinationCard";
 import StateMap from "@/components/StateMap";
+import GoogleMapEmbed from "@/components/GoogleMapEmbed";
+import { MapButtons } from "@/components/MapActions";
+import { embedPlaceUrl, mapsSearchUrl, stateQuery } from "@/lib/maps";
+import { googleMapsKey } from "@/lib/mapsConfig";
 
 export function generateStaticParams() {
   return states.map((s) => ({ id: s.id }));
@@ -83,10 +87,24 @@ export default function StatePage({ params }: { params: { id: string } }) {
             </div>
 
             <div className="lg:col-span-1">
-              <StateMap stateId={state.id} />
+              <GoogleMapEmbed
+                src={embedPlaceUrl(stateQuery(state), googleMapsKey)}
+                title={`Google Map of ${state.name}`}
+                openUrl={mapsSearchUrl(stateQuery(state))}
+                fallback={<div className="w-2/3"><StateMap stateId={state.id} /></div>}
+              />
               <p className="mt-2 text-center text-xs text-navy-400">
                 {state.capital} · {state.lat.toFixed(2)}°N, {state.lng.toFixed(2)}°E
               </p>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                <MapButtons query={stateQuery(state)} compact />
+                <Link
+                  href={`/map?state=${state.id}`}
+                  className="rounded-lg border border-navy-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy-700 hover:border-coral-300"
+                >
+                  🗺️ Every stop on the map
+                </Link>
+              </div>
             </div>
           </div>
         </div>

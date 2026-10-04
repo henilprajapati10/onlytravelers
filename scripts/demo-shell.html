@@ -50,7 +50,7 @@
 </style>
 
 <div class="flex min-h-screen flex-col">
-  <header class="sticky top-0 z-50 border-b bd" style="background:color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter:blur(8px);">
+  <header class="sticky top-0 z-50 border-b bd" style="background:color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter:blur(8px); padding-top:env(safe-area-inset-top);">
     <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
       <a href="#/" class="inline-flex shrink-0 items-center gap-2" aria-label="OnlyTravelers home">
         <svg viewBox="0 0 100 70" width="34" height="24" fill="none" aria-hidden="true">
@@ -69,6 +69,7 @@
         <a href="#/states" class="nav-link shrink-0 txt-muted" data-route="states">States</a>
         <a href="#/circuits" class="nav-link shrink-0 txt-muted" data-route="circuits">Circuits</a>
         <a href="#/festivals" class="nav-link shrink-0 txt-muted" data-route="festivals">Festivals</a>
+        <a href="#/map" class="nav-link shrink-0 txt-muted" data-route="map">Map</a>
         <a href="#/trips" class="nav-link shrink-0 txt-muted" data-route="trips">My Trips</a>
         <a href="#/profile" class="nav-link shrink-0 txt-muted" data-route="profile">You</a>
       </nav>
@@ -84,9 +85,11 @@
     </div>
   </header>
 
+  <!--preview-->
   <div class="border-b bd surface-alt px-4 py-1.5 text-center text-xs txt-faint">
     Interactive preview of the OnlyTravelers site · your Trip Bag is saved in this browser only
   </div>
+  <!--/preview-->
 
   <main id="app" class="flex-1 pb-20 md:pb-0"></main>
 
@@ -101,7 +104,7 @@
     </div>
   </div>
 
-  <nav id="tabbar" aria-label="Main" class="fixed inset-x-0 bottom-0 z-50 border-t bd md:hidden" style="background:color-mix(in srgb, var(--surface) 96%, transparent); backdrop-filter:blur(8px);">
+  <nav id="tabbar" aria-label="Main" class="fixed inset-x-0 bottom-0 z-50 border-t bd md:hidden" style="background:color-mix(in srgb, var(--surface) 96%, transparent); backdrop-filter:blur(8px); padding-bottom:env(safe-area-inset-bottom);">
     <ul class="mx-auto flex max-w-lg">
       <li class="flex-1"><a href="#/" data-tab="home" class="tab flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold txt-faint"><span class="text-lg leading-none" aria-hidden="true">🧭</span>Discover</a></li>
       <li class="flex-1"><a href="#/destinations" data-tab="explore" class="tab flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold txt-faint"><span class="text-lg leading-none" aria-hidden="true">🗺️</span>Explore</a></li>
@@ -132,6 +135,7 @@
         <ul class="space-y-2 text-sm">
           <li><a href="#/destinations" class="hover:text-coral-400">All destinations</a></li>
           <li><a href="#/states" class="hover:text-coral-400">States &amp; UTs</a></li>
+          <li><a href="#/map" class="hover:text-coral-400">Explore on the map</a></li>
           <li><a href="#/trip" class="hover:text-coral-400">Build a trip</a></li>
         </ul>
       </div>
@@ -143,11 +147,14 @@
       </div>
     </div>
     <div class="mx-auto max-w-6xl border-t border-navy-700 px-4 py-6 text-xs text-navy-300 sm:px-6">
-      OnlyTravelers demo · 359 destinations across 36 states and union territories.
+      <!--preview-->OnlyTravelers demo · <!--/preview-->359 destinations across 36 states and union territories.
     </div>
   </footer>
 </div>
 
+<script>
+//__CONFIG__
+</script>
 <script>
 //__RUNTIME__
 </script>

@@ -6,12 +6,12 @@
  * app shell always loads.
  */
 
-const VERSION = "ot-v1";
+const VERSION = "ot-v2";
 const SHELL_CACHE = `${VERSION}-shell`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
-const SHELL_URLS = ["/", "/trips", "/destinations", "/profile", "/offline"];
+const SHELL_URLS = ["/", "/trips", "/destinations", "/map", "/profile", "/offline"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

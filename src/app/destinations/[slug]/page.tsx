@@ -14,6 +14,10 @@ import { pairsWellWith } from "@/lib/suggest";
 import { festivalsForSlug } from "@/data/festivals";
 import FestivalList from "@/components/FestivalList";
 import DayShapeCard from "@/components/DayShapeCard";
+import GoogleMapEmbed from "@/components/GoogleMapEmbed";
+import { MapButtons, NearbyChips } from "@/components/MapActions";
+import { PIN_NOTE, embedPlaceUrl, mapsSearchUrl, placeQuery } from "@/lib/maps";
+import { googleMapsKey } from "@/lib/mapsConfig";
 
 export function generateStaticParams() {
   return destinations.map((d) => ({ slug: d.slug }));
@@ -43,6 +47,7 @@ export default function DestinationPage({ params }: { params: { slug: string } }
     .slice(0, 3);
   const pairs = pairsWellWith(destination, 3);
   const localFestivals = festivalsForSlug(destination.slug);
+  const query = placeQuery(destination);
 
   return (
     <article>
@@ -176,6 +181,15 @@ export default function DestinationPage({ params }: { params: { slug: string } }
               </div>
             </dl>
 
+            <h3 className="mt-8 font-display text-sm font-semibold uppercase tracking-wide text-navy-500">
+              Find near {destination.name}
+            </h3>
+            <p className="mb-2 mt-1 text-sm text-navy-500">
+              Opens Google Maps searched around the place — what is open and how far is live
+              there, not guessed here.
+            </p>
+            <NearbyChips place={query} />
+
             {destination.permitRequired && (
               <div className="mt-6 rounded-xl border-l-4 border-coral-500 bg-coral-50 p-4">
                 <h4 className="font-display text-sm font-bold text-coral-700">Permit required</h4>
@@ -286,14 +300,29 @@ export default function DestinationPage({ params }: { params: { slug: string } }
               </div>
 
               {/* Map slot — 1:1 per the layout spec */}
-              <div className="rounded-2xl border border-navy-100 bg-white p-4 shadow-card">
-                <h3 className="mb-2 font-display text-xs font-semibold uppercase tracking-wide text-navy-500">
-                  Where it is
-                </h3>
-                <StateMap stateId={state.id} />
+              <div id="map" className="rounded-2xl border border-navy-100 bg-white p-4 shadow-card">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h3 className="font-display text-xs font-semibold uppercase tracking-wide text-navy-500">
+                    Where it is
+                  </h3>
+                  <Link
+                    href={`/map?place=${destination.slug}`}
+                    className="text-xs font-semibold text-coral-500"
+                  >
+                    Big map →
+                  </Link>
+                </div>
+                <GoogleMapEmbed
+                  src={embedPlaceUrl(query, googleMapsKey)}
+                  title={`Google Map of ${destination.name}`}
+                  openUrl={mapsSearchUrl(query)}
+                  fallback={<div className="w-2/3"><StateMap stateId={state.id} /></div>}
+                />
+                <div className="mt-3">
+                  <MapButtons query={query} compact />
+                </div>
                 <p className="mt-2 text-xs text-navy-400">
-                  {destination.district}, {state.name}. Pin marks the state travel hub — verify
-                  exact coordinates and access roads before you set out.
+                  {destination.district}, {state.name}. {PIN_NOTE}
                 </p>
               </div>
             </div>

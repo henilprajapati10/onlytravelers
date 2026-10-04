@@ -22,6 +22,7 @@ export default function manifest(): MetadataRoute.Manifest {
       { name: "My trips", url: "/trips" },
       { name: "Explore destinations", url: "/destinations" },
       { name: "Circuits", url: "/circuits" },
+      { name: "Map", url: "/map" },
     ],
   };
 }
