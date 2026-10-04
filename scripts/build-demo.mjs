@@ -215,6 +215,9 @@ const destCount = (fs.readFileSync(path.join(root, "src/data/destinations.ts"), 
 
 const html = shell
   .replace("__DEST_COUNT__", () => String(destCount))
+  // Leaflet's stylesheet is inlined: the demo is one file, and the artifact
+  // viewer admits scripts from a CDN but not stylesheets.
+  .replace("/*__LEAFLET_CSS__*/", () => fs.readFileSync(path.join(root, "node_modules", "leaflet", "dist", "leaflet.css"), "utf8"))
   .replace("/*__CSS__*/", () => css)
   .replace("//__RUNTIME__", () => runtime)
   .replace("//__APP__", () => ui);
