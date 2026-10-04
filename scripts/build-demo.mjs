@@ -55,6 +55,12 @@ const ENTRIES = [
   "src/lib/responsible.ts",
   "src/lib/dayshape.ts",
   "src/lib/maps.ts",
+  "src/lib/nearby.ts",
+  "src/lib/weather.ts",
+  "src/data/phrases.ts",
+  "src/lib/daily.ts",
+  "src/lib/visited.ts",
+  "src/lib/expenses.ts",
 ];
 
 /** Resolve an import the way the bundler would, relative to the repo root. */
@@ -168,6 +174,12 @@ ${registry}
     coords: __req("@/data/coords"),
     shapes: __req("@/data/shapes"),
     maps: __req("@/lib/maps"),
+    nearby: __req("@/lib/nearby"),
+    weather: __req("@/lib/weather"),
+    phrases: __req("@/data/phrases"),
+    daily: __req("@/lib/daily"),
+    visited: __req("@/lib/visited"),
+    expenses: __req("@/lib/expenses"),
   };
 })();
 `;

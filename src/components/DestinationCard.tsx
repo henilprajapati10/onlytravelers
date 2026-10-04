@@ -2,15 +2,20 @@
 
 import Link from "next/link";
 import type { Destination } from "@/data/destinations";
-import { getGuide } from "@/data/guides";
 import { useCart } from "@/context/TripsContext";
 import { shortDays, themeEmoji } from "@/lib/format";
 import DestinationImage from "./DestinationImage";
 
-export default function DestinationCard({ destination }: { destination: Destination }) {
+export default function DestinationCard({
+  destination,
+  summary,
+}: {
+  destination: Destination;
+  /** One-paragraph summary from the guide; server pages pass it, client lists pass it once loaded. */
+  summary?: string;
+}) {
   const { isInCart, toggleCart } = useCart();
   const inCart = isInCart(destination.slug);
-  const guide = getGuide(destination.slug);
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-card transition hover:-translate-y-1">
@@ -52,7 +57,7 @@ export default function DestinationCard({ destination }: { destination: Destinat
         </Link>
         <p className="text-xs text-navy-400">{destination.district}</p>
 
-        {guide && <p className="line-clamp-3 text-sm text-navy-500">{guide.summary}</p>}
+        {summary && <p className="line-clamp-3 text-sm text-navy-500">{summary}</p>}
 
         <div className="mt-auto flex items-center justify-between pt-2 text-xs text-navy-400">
           <span>{shortDays(destination.idealDays)}</span>

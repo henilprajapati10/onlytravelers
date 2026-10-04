@@ -8,6 +8,10 @@ import { NATIONAL_NUMBERS, essentialsFor } from "@/data/essentials";
 import { countLabel, themeEmoji } from "@/lib/format";
 import { googleDirectionsUrl } from "@/lib/maps";
 import DayShapeCard from "./DayShapeCard";
+import { useGuides } from "@/lib/useGuides";
+import NearbyLinks from "./NearbyLinks";
+import WeatherCard from "./WeatherCard";
+import Phrasebook from "./Phrasebook";
 
 const LEG_ICON: Record<string, string> = {
   Flight: "✈️",
@@ -31,6 +35,7 @@ export default function TodayCard({
   compact?: boolean;
 }) {
   const state = todayFor(trip, plan);
+  const guide = useGuides();
 
   if (!state) {
     return (
@@ -137,7 +142,19 @@ export default function TodayCard({
       <div className="flex flex-col gap-4 p-5">
         {/* On a day at a place, the useful thing is how to spend it. */}
         {here && !state.todayLeg && !compact && (
-          <DayShapeCard destination={here.destination} month={trip.travelMonth} compact />
+          <DayShapeCard
+            destination={here.destination}
+            month={trip.travelMonth}
+            tip={guide?.(here.destination.slug)?.tip}
+            compact
+          />
+        )}
+
+        {here && (
+          <>
+            <WeatherCard destination={here.destination} compact />
+            <NearbyLinks destination={here.destination} compact />
+          </>
         )}
 
         {here && !state.todayLeg && (
@@ -198,6 +215,8 @@ export default function TodayCard({
                 </div>
               </dl>
             </div>
+
+            <Phrasebook languages={essentials.languages} compact />
 
             <div className="flex flex-wrap gap-2">
               {NATIONAL_NUMBERS.map((n) => (

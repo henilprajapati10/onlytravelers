@@ -16,6 +16,18 @@
   const { swapReport, swapReasonLabel } = OT.alternatives;
   const { buildResponsibleNotes, groupResponsible } = OT.responsible;
   const { shapeForDestination } = OT.dayshape;
+  const { stateShapes, INDIA_VIEWBOX, projectToIndia } = OT.shapes;
+  const { coordFor } = OT.coords;
+  const { googleMapsPinUrl, googleDirectionsUrl } = OT.maps;
+  const { nearbyLinks } = OT.nearby;
+  const { forecastUrl, parseForecast, describeCode, dayLabel, isFresh, forecastAdvice, WEATHER_CACHE_KEY } = OT.weather;
+  const { PHRASE_SET, phrasebookFor } = OT.phrases;
+  const { placeOfTheDay, dayIndex, advanceStreak, EMPTY_STREAK } = OT.daily;
+  const { summariseVisited } = OT.visited;
+  const { budgetBurn } = OT.expenses;
+  const MAP_ATTRIBUTION = "Boundaries: amCharts geodata (2023 divisions)";
+  const VISITED_KEY = "onlytravelers.demo.visited.v1";
+  const STREAK_KEY = "onlytravelers.demo.streak.v1";
 
   const bySlug = (s) => destinations.find((d) => d.slug === s);
   const esc = (s) =>
@@ -199,44 +211,209 @@
   }
 
   /* ---------- locator map ---------- */
-  const OUTLINE = [
-    [68.2, 23.7], [68.5, 24.3], [70, 24.3], [70.6, 27.7], [72.9, 28], [73.9, 30.1], [74.6, 31.7],
-    [74, 32.5], [74.3, 34.1], [76, 34.6], [77.8, 35.5], [78.9, 34.4], [79.2, 33], [79, 32],
-    [80.1, 30.6], [81, 30.2], [82.5, 30.1], [84, 29], [86, 28], [88, 27.9], [88.7, 26.5],
-    [89.8, 26.7], [92, 27.5], [94.5, 28], [96.5, 28.5], [97.3, 28.2], [96.5, 27], [95, 26.6],
-    [94.6, 25.2], [93.4, 24], [92.5, 22], [91.5, 22.8], [89.5, 22], [88, 21.6], [86.5, 20.5],
-    [85, 19.5], [83, 17.5], [80.3, 15.8], [80.2, 13.5], [79.8, 10.3], [79, 9.3], [78.2, 8.4],
-    [77.5, 8.1], [76.5, 9.5], [75.7, 11.6], [74.8, 13], [73.8, 15.5], [72.8, 18.9], [72.6, 21.5],
-    [70, 20.8], [69, 22.3],
-  ];
-  const SIZE = 300, PAD = 12;
-  const proj = (lng, lat) => [
-    Math.round((PAD + ((lng - 67) / 31) * (SIZE - PAD * 2)) * 10) / 10,
-    Math.round((PAD + ((37 - lat) / 31) * (SIZE - PAD * 2)) * 10) / 10,
-  ];
-  function stateMap(stateId) {
+  /* ---------- maps: the same boundary data the app draws ---------- */
+  function pathBbox(d) {
+    const nums = d.match(/-?\d+(\.\d+)?/g).map(Number);
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let i = 0; i + 1 < nums.length; i += 2) {
+      minX = Math.min(minX, nums[i]); maxX = Math.max(maxX, nums[i]);
+      minY = Math.min(minY, nums[i + 1]); maxY = Math.max(maxY, nums[i + 1]);
+    }
+    return { minX, minY, maxX, maxY };
+  }
+  const bboxCache = {};
+  // shapes.ts carries bbox as [minX, minY, maxX, maxY]; fall back to the path.
+  const bboxOf = (shape) =>
+    Array.isArray(shape.bbox) && shape.bbox.length === 4
+      ? { minX: shape.bbox[0], minY: shape.bbox[1], maxX: shape.bbox[2], maxY: shape.bbox[3] }
+      : bboxCache[shape.id] || (bboxCache[shape.id] = pathBbox(shape.d));
+
+  /** One state filling the frame, neighbours faint, pins where the places are. */
+  function stateMap(stateId, pins) {
     const st = getState(stateId);
-    if (!st) return "";
-    const path = OUTLINE.map(([lng, lat], i) => {
-      const [x, y] = proj(lng, lat);
-      return `${i === 0 ? "M" : "L"}${x},${y}`;
-    }).join(" ") + " Z";
-    const [px, py] = proj(st.lng, st.lat);
-    const dots = states
-      .filter((s) => s.id !== st.id)
-      .map((s) => {
-        const [x, y] = proj(s.lng, s.lat);
-        return `<circle cx="${x}" cy="${y}" r="1.8" fill="#b0c1d9"/>`;
-      })
-      .join("");
-    const right = px > SIZE * 0.72;
-    return `<svg viewBox="0 0 ${SIZE} ${SIZE}" class="aspect-square w-full rounded-lg" style="background:var(--surface-alt)" role="img" aria-label="Locator map for ${esc(st.name)}">
-      <path d="${path}" fill="#e4ebf3" stroke="#b0c1d9" stroke-width="1.2" stroke-linejoin="round"/>
-      ${dots}
-      <circle cx="${px}" cy="${py}" r="13" fill="#e8492a" opacity="0.18"/>
-      <circle cx="${px}" cy="${py}" r="6" fill="#e8492a" stroke="#fff" stroke-width="2"/>
-      <text x="${right ? px - 10 : px + 10}" y="${py + 4}" text-anchor="${right ? "end" : "start"}" font-size="11" font-weight="600" fill="#0b1b30">${esc(st.capital)}</text>
+    const me = stateShapes.find((x) => x.id === stateId);
+    if (!st || !me) return "";
+    const b = bboxOf(me);
+    let w = b.maxX - b.minX, h = b.maxY - b.minY;
+    const pad = Math.max(w, h) * 0.12;
+    w += pad * 2; h += pad * 2;
+    let cx = (b.minX + b.maxX) / 2, cy = (b.minY + b.maxY) / 2;
+    const MIN_ASPECT = 0.85, MAX_ASPECT = 1.6;
+    if (h / w > MAX_ASPECT) w = h / MAX_ASPECT;
+    if (h / w < MIN_ASPECT) h = w * MIN_ASPECT;
+    const x0 = cx - w / 2, y0 = cy - h / 2;
+    const unit = Math.max(w, h) / 300;
+    const others = stateShapes.filter((x) => x.id !== stateId)
+      .map((x) => `<path d="${x.d}" fill="#eef2f7" stroke="#dbe3ee" stroke-width="${(unit * 0.4).toFixed(2)}"/>`).join("");
+    const pinMarks = (pins || []).map((p) => {
+      const q = projectToIndia(p.lng, p.lat);
+      return `<g><circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${(unit * 7).toFixed(1)}" fill="#e8492a" opacity=".18"/><circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${(unit * 3.2).toFixed(1)}" fill="#0b1b30" stroke="#fff" stroke-width="${(unit * 1.2).toFixed(1)}"/><title>${esc(p.label)}</title></g>`;
+    }).join("");
+    return `<svg viewBox="${x0.toFixed(1)} ${y0.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}" class="w-full rounded-lg" style="background:#f4f8fc" role="img" aria-label="Map of ${esc(st.name)}">
+      ${others}
+      <path d="${me.d}" fill="#fdece8" stroke="#e8492a" stroke-width="${(unit * 1.2).toFixed(2)}" stroke-linejoin="round"/>
+      ${pinMarks}
+    </svg>
+    <p class="mt-1 text-center text-[10px] txt-faint">${MAP_ATTRIBUTION}</p>`;
+  }
+
+  /** The whole country, coloured by `fills`; each state is tappable when `tappable`. */
+  function indiaMap(fills, tappable) {
+    return `<svg viewBox="0 0 ${INDIA_VIEWBOX.width} ${INDIA_VIEWBOX.height}" class="h-auto w-full" role="${tappable ? "group" : "img"}" aria-label="Map of India by state and union territory">
+      ${stateShapes.map((x) => {
+        const st = getState(x.id);
+        const fill = (fills && fills[x.id]) || "#dbe3ee";
+        const inner = `<path d="${x.d}" fill="${fill}" stroke="#ffffff" stroke-width="1" stroke-linejoin="round"/><title>${esc(st ? st.name : x.sourceName)}</title>`;
+        return tappable && st
+          ? `<g data-visit="${x.id}" role="button" tabindex="0" aria-label="${esc(st.name)}" aria-pressed="${fills && fills[x.id] ? "true" : "false"}" style="cursor:pointer">${inner}</g>`
+          : `<g>${inner}</g>`;
+      }).join("")}
     </svg>`;
+  }
+
+  /* ---------- on the ground: nearby, weather, phrases ---------- */
+  function nearbyGrid(d, compact) {
+    const links = nearbyLinks(d);
+    return `<div data-testid="nearby" class="${compact ? "" : "rounded-2xl border bd surface p-4 shadow-card"}">
+      <p class="font-display text-xs font-semibold uppercase tracking-wide txt-faint">Near ${esc(d.name)}</p>
+      <ul class="mt-2 grid grid-cols-4 gap-1.5">${links.map(({ kind, url }) => `<li><a href="${url}" target="_blank" rel="noopener noreferrer" title="${esc(kind.label)} near ${esc(d.name)} — opens Google Maps" class="flex flex-col items-center gap-0.5 rounded-lg border bd surface-alt px-1 py-2 text-center text-[11px] font-medium txt"><span class="text-lg leading-none" aria-hidden="true">${kind.icon}</span><span class="leading-tight">${esc(kind.label)}</span></a></li>`).join("")}</ul>
+      ${compact ? "" : '<p class="mt-2 text-[11px] txt-faint">Opens Google Maps with live results. We never list addresses or numbers ourselves — they go stale.</p>'}
+    </div>`;
+  }
+
+  function weatherSlot(d, compact) {
+    const c = coordFor(d.slug);
+    if (!c) return "";
+    return `<div data-weather="${d.slug}" data-lat="${c.lat}" data-lng="${c.lng}" data-compact="${compact ? 1 : 0}" class="${compact ? "" : "rounded-2xl border bd surface p-4 shadow-card"}">
+      <p class="font-display text-xs font-semibold uppercase tracking-wide txt-faint">Weather now</p>
+      <p class="mt-1 text-sm txt-faint">Checking the forecast…</p></div>`;
+  }
+
+  function weatherMarkup(f, compact, lat, lng) {
+    const now = describeCode(f.nowCode);
+    const advice = forecastAdvice(f);
+    const fresh = isFresh(f);
+    const asOf = new Date(f.fetchedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+    return `
+      <p class="font-display text-xs font-semibold uppercase tracking-wide txt-faint">Weather ${fresh ? "now" : "as of " + asOf}</p>
+      <p class="mt-1 text-2xl font-bold txt"><span aria-hidden="true">${now.icon}</span> ${f.nowC}°C <span class="ml-2 text-sm font-medium txt-muted">${esc(now.label)}</span></p>
+      <ul class="mt-3 grid grid-cols-5 gap-1">${f.days.slice(0, 5).map((d) => { const w = describeCode(d.code); return `<li class="rounded-lg surface-alt px-1 py-1.5 text-center" title="${esc(w.label)}"><p class="text-[10px] font-semibold uppercase txt-faint">${esc(dayLabel(d.date))}</p><p class="text-base leading-tight" aria-hidden="true">${w.icon}</p><p class="text-[11px] tabular-nums txt">${d.maxC}° <span class="txt-faint">${d.minC}°</span></p>${d.rainChance >= 30 ? `<p class="text-[10px]" style="color:#0369a1">💧${d.rainChance}%</p>` : ""}</li>`; }).join("")}</ul>
+      ${advice ? `<p class="mt-3 rounded-lg border-l-4 bd surface-alt p-2.5 text-xs txt">${esc(advice)}</p>` : ""}
+      ${compact ? "" : `<p class="mt-2 text-[11px] txt-faint">Forecast by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="underline">Open-Meteo</a> (CC BY 4.0) for ${Number(lat).toFixed(2)}°N ${Number(lng).toFixed(2)}°E. Refreshed hourly.</p>`}`;
+  }
+
+  /** After each render, fill the weather slots from cache or the network. */
+  function fillWeather() {
+    document.querySelectorAll("[data-weather]").forEach((el) => {
+      const lat = Number(el.dataset.lat), lng = Number(el.dataset.lng);
+      const key = lat.toFixed(3) + "," + lng.toFixed(3);
+      const compact = el.dataset.compact === "1";
+      const cache = readKey(WEATHER_CACHE_KEY, {});
+      const cached = cache[key];
+      if (cached) el.innerHTML = weatherMarkup(cached, compact, lat, lng);
+      if (isFresh(cached)) { el.dataset.status = "ready"; return; }
+      el.dataset.status = "loading";
+      fetch(forecastUrl(lat, lng))
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+        .then((raw) => {
+          const f = parseForecast(raw);
+          if (!f) throw new Error("bad forecast");
+          const next = readKey(WEATHER_CACHE_KEY, {});
+          next[key] = f;
+          writeKey(WEATHER_CACHE_KEY, next);
+          if (document.body.contains(el)) { el.innerHTML = weatherMarkup(f, compact, lat, lng); el.dataset.status = "ready"; }
+        })
+        .catch(() => {
+          if (!document.body.contains(el)) return;
+          el.dataset.status = cached ? "ready" : "unavailable";
+          if (!cached) el.innerHTML = `<p class="font-display text-xs font-semibold uppercase tracking-wide txt-faint">Weather now</p><p class="mt-1 text-sm txt-faint">No forecast right now — the weather service could not be reached. The best-months guidance still holds.</p>`;
+        });
+    });
+  }
+
+  function phrasebook(languages, compact) {
+    const books = phrasebookFor(languages || []);
+    if (!books.length) return "";
+    const shown = books.slice(0, compact ? 1 : 2);
+    return `<div data-testid="phrasebook" class="${compact ? "" : "rounded-2xl border bd surface p-4 shadow-card"}">
+      <p class="font-display text-xs font-semibold uppercase tracking-wide txt-faint">Say it in ${shown.map((b) => esc(b.language)).join(" / ")}</p>
+      <table class="mt-2 w-full text-sm"><tbody>${PHRASE_SET.map((p) => `<tr class="border-t bd"><th scope="row" class="py-1 pr-3 text-left font-medium txt-muted">${esc(p.english)}</th>${shown.map((b) => `<td class="py-1 pr-2 font-semibold txt">${esc(b.phrases[p.id])}</td>`).join("")}</tr>`).join("")}</tbody></table>
+      ${!compact && books.length > shown.length ? `<p class="mt-2 text-[11px] txt-faint">Also spoken here: ${books.slice(shown.length).map((b) => esc(b.language)).join(", ")}.</p>` : ""}
+    </div>`;
+  }
+
+  /* ---------- habit: place of the day, streak ---------- */
+  function touchStreak() {
+    const prev = readKey(STREAK_KEY, EMPTY_STREAK);
+    const safe = prev && typeof prev.current === "number" && typeof prev.lastDay === "number" ? prev : EMPTY_STREAK;
+    const next = advanceStreak(safe, dayIndex());
+    if (next !== safe) writeKey(STREAK_KEY, next);
+    return next;
+  }
+
+  function placeOfTheDayCard() {
+    const place = placeOfTheDay();
+    const st = getState(place.stateId);
+    const g = guides[place.slug];
+    const streak = touchStreak();
+    return `<section data-testid="place-of-the-day" class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <div class="grid overflow-hidden rounded-2xl border bd surface shadow-card sm:grid-cols-[2fr_3fr]">
+        <a href="#/destinations/${place.slug}" class="block aspect-[3/2] sm:aspect-auto">${scene(place.slug, place.themes, 360, 240, "h-full w-full")}</a>
+        <div class="flex flex-col p-5 sm:p-6">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-xs font-semibold uppercase tracking-wide accent">Today's place</p>
+            ${streak.current > 1 ? `<p data-testid="streak" class="rounded-full surface-alt px-2.5 py-1 text-xs font-semibold txt" title="Longest run: ${streak.longest} days · ${streak.seen} places seen">🔥 ${streak.current}-day streak</p>` : ""}
+          </div>
+          <h2 class="font-display mt-1 text-2xl font-bold txt"><a href="#/destinations/${place.slug}">${esc(place.name)}</a></h2>
+          <p class="text-sm txt-muted">${esc(place.district)}, ${esc(st ? st.name : place.stateName)}${place.hiddenGem ? " · ◆ Hidden gem" : ""}</p>
+          <p class="mt-3 line-clamp-4 text-sm txt-muted">${esc(g ? g.summary : place.themes.join(", "))}</p>
+          <div class="mt-auto flex flex-wrap items-center gap-1.5 pt-4">
+            ${place.themes.slice(0, 3).map((t) => `<span class="rounded-full surface-alt px-2 py-0.5 text-[11px] txt-muted">${themeEmoji[t]} ${t}</span>`).join("")}
+            <a href="#/destinations/${place.slug}" class="ml-auto text-sm font-semibold accent">Read the guide →</a>
+          </div>
+        </div>
+      </div>
+    </section>`;
+  }
+
+  /* ---------- My India ---------- */
+  function myIndiaSummary() {
+    const manual = readKey(VISITED_KEY, []);
+    return summariseVisited(Array.isArray(manual) ? manual : [], store.trips);
+  }
+
+  function myIndiaSection() {
+    const sum = myIndiaSummary();
+    const fills = {};
+    sum.ids.forEach((id) => { fills[id] = sum.fromTrips.has(id) ? "#c73820" : "#e8492a"; });
+    const nextZone = sum.untouchedZones[0];
+    return `<section data-testid="my-india" class="rounded-2xl border bd surface p-5 shadow-card">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div><h2 class="font-display font-semibold txt">My India</h2><p class="text-sm txt-muted">Tap a state you have been to. Completed trips fill in on their own.</p></div>
+        <div class="text-right"><div class="font-display text-3xl font-bold tabular-nums txt" data-testid="my-india-count">${sum.count}<span class="text-base font-semibold txt-faint"> / ${sum.total}</span></div><div class="text-xs uppercase tracking-wide txt-faint">states &amp; UTs · ${sum.percent}%</div></div>
+      </div>
+      <div id="my-india-map" class="mx-auto mt-4 w-full max-w-sm">${indiaMap(fills, true)}</div>
+      <div class="mt-3 flex flex-wrap items-center gap-2 text-xs txt-muted">
+        <span class="inline-flex items-center gap-1"><span class="inline-block h-3 w-3 rounded-sm" style="background:#e8492a"></span> been</span>
+        <span class="inline-flex items-center gap-1"><span class="inline-block h-3 w-3 rounded-sm" style="background:#c73820"></span> from a completed trip</span>
+        <span class="inline-flex items-center gap-1"><span class="inline-block h-3 w-3 rounded-sm" style="background:#dbe3ee"></span> not yet</span>
+        <span class="ml-auto text-[11px] txt-faint">${MAP_ATTRIBUTION}</span>
+      </div>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button type="button" id="my-india-download" class="rounded-lg border bd surface px-3 py-2 text-sm font-semibold txt">Download my map</button>
+        ${sum.count > 0 && nextZone ? `<a href="#/destinations?zone=${encodeURIComponent(nextZone)}" class="rounded-lg px-3 py-2 text-sm font-semibold accent" style="background:rgba(232,73,42,.09)">Nothing in the ${esc(nextZone)} yet → start there</a>` : ""}
+        ${sum.count === 0 ? `<a href="#/start" class="rounded-lg px-3 py-2 text-sm font-semibold accent" style="background:rgba(232,73,42,.09)">Blank map. Plan the first trip →</a>` : ""}
+      </div>
+    </section>`;
+  }
+
+  function downloadMyIndia() {
+    const sum = myIndiaSummary();
+    const fills = {};
+    sum.ids.forEach((id) => { fills[id] = sum.fromTrips.has(id) ? "#c73820" : "#e8492a"; });
+    const inner = indiaMap(fills, false).replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1210" width="1000" height="1210">${inner}<text x="500" y="1170" text-anchor="middle" font-family="system-ui,sans-serif" font-size="34" font-weight="700" fill="#0b1b30">My India · ${sum.count} of ${sum.total} states &amp; UTs</text><text x="500" y="1196" text-anchor="middle" font-family="system-ui,sans-serif" font-size="16" fill="#7a8ba3">onlytravelers · ${MAP_ATTRIBUTION}</text></svg>`;
+    downloadFile("my-india.svg", svg, "image/svg+xml");
   }
 
   /* ---------- views ---------- */
@@ -290,6 +467,7 @@
 
   function homeBody() {
     return `
+    ${placeOfTheDayCard()}
     <section class="mx-auto max-w-6xl px-4 py-14 sm:px-6">
       <div class="mb-6 flex items-end justify-between gap-4">
         <div>
@@ -427,6 +605,8 @@
     const st = getState(d.stateId);
     const g = guides[d.slug];
     const season = seasonBadge(d);
+    const coord = coordFor(d.slug);
+    const ess = essentialsFor(d.stateId);
     const nearby = destinations.filter((x) => x.slug !== d.slug && x.stateId === d.stateId).slice(0, 3);
     const tone =
       season.tone === "monsoon" ? "background:#d1fae5;color:#065f46"
@@ -509,9 +689,16 @@
               </div>
               <div class="rounded-2xl border bd surface p-4 shadow-card">
                 <h3 class="mb-2 font-display text-xs font-semibold uppercase tracking-wide txt-faint">Where it is</h3>
-                ${stateMap(st.id)}
-                <p class="mt-2 text-xs txt-faint">${esc(d.district)}, ${esc(st.name)}. Pin marks the state travel hub.</p>
+                ${stateMap(st.id, coord ? [{ lat: coord.lat, lng: coord.lng, label: d.name }] : [])}
+                <p class="mt-2 text-xs txt-faint">${esc(d.district)}, ${esc(st.name)}${coord ? ` · <span class="tabular-nums">${coord.lat.toFixed(4)}°N, ${coord.lng.toFixed(4)}°E</span>` : ""}</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <a href="${googleMapsPinUrl(d)}" target="_blank" rel="noopener noreferrer" class="rounded-lg border bd surface px-3 py-1.5 text-xs font-semibold txt">📍 Open in Google Maps ↗</a>
+                  <a href="${googleDirectionsUrl(d)}" target="_blank" rel="noopener noreferrer" class="rounded-lg border bd surface px-3 py-1.5 text-xs font-semibold txt">🧭 Directions ↗</a>
+                </div>
               </div>
+              ${weatherSlot(d, false)}
+              ${nearbyGrid(d, false)}
+              ${ess ? phrasebook(ess.languages, false) : ""}
             </div>
           </aside>
         </div>
@@ -589,7 +776,7 @@
               </div>
               ${st.routingNote ? `<p class="mt-3 rounded-lg border-l-4 bd surface-alt p-3 text-sm txt-muted"><strong>Routing note:</strong> best travelled as part of ${esc(st.routingNote)}, not as a standalone trip.</p>` : ""}
             </div>
-            <div>${stateMap(st.id)}<p class="mt-2 text-center text-xs txt-faint">${esc(st.capital)} · ${st.lat.toFixed(2)}°N, ${st.lng.toFixed(2)}°E</p></div>
+            <div>${stateMap(st.id, list.map((d) => { const c = coordFor(d.slug); return c ? { lat: c.lat, lng: c.lng, label: d.name } : null; }).filter(Boolean))}<p class="mt-2 text-center text-xs txt-faint">${esc(st.capital)} · ${st.lat.toFixed(2)}°N, ${st.lng.toFixed(2)}°E</p></div>
           </div>
         </div>
       </div>
@@ -1099,6 +1286,11 @@
 
       ${shape ? `<div class="mt-4">${shape}</div>` : ""}
 
+      ${cur ? `<div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <div class="rounded-xl border bd surface p-4">${weatherSlot(cur.destination, true)}</div>
+        <div class="rounded-xl border bd surface p-4">${nearbyGrid(cur.destination, true)}</div>
+      </div>` : ""}
+
       ${state.nextLeg && state.lastDayHere
         ? `<div class="mt-4 rounded-xl border bd surface p-4">
              <p class="text-xs font-semibold uppercase tracking-wide txt-faint">Next</p>
@@ -1119,8 +1311,10 @@
           <div><dt class="text-xs uppercase tracking-wide txt-faint">Eat</dt><dd class="txt-muted">${esc(ess.eat)}</dd></div>
           <div><dt class="text-xs uppercase tracking-wide txt-faint">Watch for</dt><dd class="txt-muted">${esc(ess.watchFor)}</dd></div>
         </dl>
+        <div class="mt-3">${phrasebook(ess.languages, true)}</div>
         <p class="mt-3 text-xs txt-faint">${NATIONAL_NUMBERS.map((n) => `${esc(n.label)} ${esc(n.number)}`).join(" · ")}</p>
-      </div>` : ""}`;
+      </div>` : ""}
+      ${(() => { const target = state.todayLeg ? (state.next && state.next.destination) : (cur && cur.destination); return target ? `<a href="${googleDirectionsUrl(target)}" target="_blank" rel="noopener noreferrer" class="mt-4 inline-block rounded-lg border bd surface px-4 py-2 text-sm font-semibold txt">🧭 Directions to ${esc(target.name)} ↗</a>` : ""; })()}`;
   }
 
   /* ---------- festivals, swaps, respect and the shape of a day ---------- */
@@ -1151,7 +1345,7 @@
 
   function dayShapeCard(destination, month, compact, showAdvice) {
     if (showAdvice === undefined) showAdvice = true;
-    const shape = shapeForDestination(destination, month || undefined);
+    const shape = shapeForDestination(destination, month || undefined, (guides[destination.slug] || {}).tip);
     return `<div class="rounded-xl border bd surface p-4 shadow-card">
       ${compact ? "" : '<h3 class="font-display text-sm font-semibold uppercase tracking-wide txt-faint">How a day here works</h3>'}
       ${shape.heatWarning ? `<p class="mt-2 rounded-lg border-l-4 p-3 text-xs txt" style="border-color:#e8492a;background:rgba(232,73,42,.09)">${esc(shape.heatWarning)}</p>` : ""}
@@ -1339,11 +1533,27 @@
     list.forEach((e) => (cats[e.category] = (cats[e.category] || 0) + e.amount));
     const rows = Object.keys(cats).sort((a, b) => cats[b] - cats[a]);
     const rupees = (n) => "₹" + n.toLocaleString("en-IN");
+    const today = plan ? todayFor(trip, plan) : null;
+    const burn = budgetBurn({ total, budget: trip.budget, days, daysIn: today && today.phase === "during" ? today.dayNumber : undefined });
 
     return `
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
         ${[[rupees(total), "total so far"], [days ? rupees(Math.round(total / days)) : "—", "per day"], [String(list.length), "entries"]]
           .map(([v, l]) => `<div class="rounded-xl border bd surface p-4 text-center shadow-card"><div class="font-display text-2xl font-bold tabular-nums txt">${v}</div><div class="text-xs uppercase tracking-wide txt-faint">${l}</div></div>`).join("")}
+      </div>
+      <div data-testid="budget" class="mt-5 rounded-xl border bd surface p-4 shadow-card">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="font-display text-sm font-semibold txt">Your budget for this trip</h2>
+          <form id="budget-form" class="flex items-center gap-2">
+            <input id="bd-amt" inputmode="numeric" value="${trip.budget || ""}" placeholder="₹ total you plan to spend" aria-label="Budget in rupees" class="w-44 rounded-lg border bd px-3 py-2 text-sm tabular-nums txt"/>
+            <button type="submit" class="rounded-lg border bd surface px-3 py-2 text-sm font-semibold txt">Set</button>
+          </form>
+        </div>
+        ${trip.budget ? `<div class="mt-3">
+          <div class="flex items-center justify-between text-xs txt-muted"><span>${rupees(total)} of ${rupees(trip.budget)}${burn.left >= 0 ? ` · ${rupees(burn.left)} left` : ` · ${rupees(-burn.left)} over`}</span><span class="tabular-nums">${Math.min(999, burn.percent)}%</span></div>
+          <div class="mt-1 h-2 overflow-hidden rounded-full surface-alt"><div class="h-full" style="width:${Math.min(100, burn.percent)}%;background:${burn.percent > 100 ? "#e8492a" : burn.percent > 80 ? "#f59e0b" : "#10b981"}"></div></div>
+          ${burn.note ? `<p class="mt-2 text-xs txt">${esc(burn.note)}</p>` : ""}
+        </div>` : `<p class="mt-2 text-xs txt-faint">Set a total and this shows what is left, and whether the pace of spending fits the days remaining.</p>`}
       </div>
       <form id="spend-form" class="mt-5 rounded-xl border bd surface p-4 shadow-card">
         <h2 class="font-display text-sm font-semibold txt">Add a spend</h2>
@@ -1389,6 +1599,7 @@
           .map(([v, l]) => `<div class="rounded-xl border bd surface p-4 text-center shadow-card"><div class="font-display text-2xl font-bold tabular-nums txt">${v}</div><div class="text-xs uppercase tracking-wide txt-faint">${l}</div></div>`).join("")}
       </div>
       <div class="mt-6 flex flex-col gap-5">
+        ${myIndiaSection()}
         <section class="rounded-2xl border bd surface p-5 shadow-card">
           <h2 class="font-display font-semibold txt">The basics</h2>
           <div class="mt-3 grid gap-3 sm:grid-cols-2">
@@ -1635,6 +1846,7 @@
     });
     badge();
     syncTabs(r.view);
+    fillWeather();
     if (r.view === "festivals" && r.month) {
       const target = document.getElementById("month-" + r.month);
       if (target) { target.scrollIntoView({ block: "start" }); return; }
@@ -1928,6 +2140,23 @@
       }
       return;
     }
+    const visit = e.target.closest("[data-visit]");
+    if (visit) {
+      e.preventDefault();
+      const id = visit.dataset.visit;
+      const sum = myIndiaSummary();
+      if (sum.fromTrips.has(id)) return; // earned by a completed trip; stays
+      const manual = readKey(VISITED_KEY, []);
+      const list = Array.isArray(manual) ? manual : [];
+      writeKey(VISITED_KEY, list.includes(id) ? list.filter((x) => x !== id) : list.concat(id));
+      render(false);
+      return;
+    }
+    if (e.target.closest("#my-india-download")) {
+      e.preventDefault();
+      downloadMyIndia();
+      return;
+    }
     const delSpend = e.target.closest("[data-del-spend]");
     if (delSpend) {
       e.preventDefault();
@@ -1966,6 +2195,17 @@
   });
 
   document.addEventListener("submit", (e) => {
+    if (e.target.id === "budget-form") {
+      e.preventDefault();
+      const trip = store.trips.find((t) => t.id === route().id);
+      if (!trip) return;
+      const v = Number(document.getElementById("bd-amt").value);
+      trip.budget = isFinite(v) && v > 0 ? Math.round(v) : undefined;
+      trip.updatedAt = new Date().toISOString();
+      persistTrips();
+      render(false);
+      return;
+    }
     if (e.target.id !== "spend-form") return;
     e.preventDefault();
     const r = route();

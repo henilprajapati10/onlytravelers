@@ -85,3 +85,40 @@ export function sumExpenses(expenses: Expense[]): number {
 export function formatRupees(amount: number): string {
   return `₹${amount.toLocaleString("en-IN")}`;
 }
+
+/**
+ * How the spend so far sits against the traveller's own budget. Pure, so the
+ * demo and the tests share it. `daysIn` is the day of the trip they are on,
+ * when the trip has started; before it starts (a day number below 1) or
+ * after it ends there is no pace to judge, only the daily figure.
+ */
+export function budgetBurn({
+  total,
+  budget,
+  days,
+  daysIn,
+}: {
+  total: number;
+  budget?: number;
+  days: number;
+  daysIn?: number;
+}): { left: number; percent: number; note?: string } {
+  if (!budget || budget <= 0) return { left: 0, percent: 0 };
+  const left = budget - total;
+  const percent = Math.round((total / budget) * 100);
+  let note: string | undefined;
+  if (left < 0) {
+    note = "Over budget. Nothing wrong with that if it was a choice — but the next few days should be the cheap ones.";
+  } else if (daysIn && daysIn >= 1 && days > 0 && daysIn <= days) {
+    const daysLeft = days - daysIn + 1;
+    const dailyLeft = Math.round(left / daysLeft);
+    const dailyPlanned = Math.round(budget / days);
+    note =
+      dailyLeft < dailyPlanned * 0.7
+        ? `Day ${daysIn} of ${days}: ${formatRupees(dailyLeft)} a day left, against ${formatRupees(dailyPlanned)} a day planned. Spending is running ahead.`
+        : `Day ${daysIn} of ${days}: ${formatRupees(dailyLeft)} a day to spend for the rest of the trip.`;
+  } else if (days > 0) {
+    note = `That is ${formatRupees(Math.round(budget / days))} a day across ${days} days, all in.`;
+  }
+  return { left, percent, note };
+}

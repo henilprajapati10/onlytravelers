@@ -2,7 +2,9 @@ import Link from "next/link";
 import { destinations, themes } from "@/data/destinations";
 import { states, zones, zoneBlurbs } from "@/data/states";
 import DestinationCard from "@/components/DestinationCard";
+import { getGuide } from "@/data/guides";
 import HomeHero from "@/components/HomeHero";
+import PlaceOfTheDay from "@/components/PlaceOfTheDay";
 import { themeEmoji } from "@/lib/format";
 
 /* Six quiet ones, fixed rather than random so the page is the same for
@@ -39,6 +41,7 @@ export default function HomePage() {
   return (
     <div>
       <HomeHero />
+      <PlaceOfTheDay />
 
       <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
         <div className="mb-6 flex items-end justify-between gap-4">
@@ -54,7 +57,11 @@ export default function HomePage() {
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {featured.map((destination) => (
-            <DestinationCard key={destination.slug} destination={destination} />
+            <DestinationCard
+              key={destination.slug}
+              destination={destination}
+              summary={getGuide(destination.slug)?.summary}
+            />
           ))}
         </div>
       </section>
@@ -81,7 +88,11 @@ export default function HomePage() {
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {gems.map((destination) => (
-              <DestinationCard key={destination.slug} destination={destination} />
+              <DestinationCard
+              key={destination.slug}
+              destination={destination}
+              summary={getGuide(destination.slug)?.summary}
+            />
             ))}
           </div>
         </div>

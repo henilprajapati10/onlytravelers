@@ -6,7 +6,7 @@ import { useTrips } from "@/context/TripsContext";
 import { formatMonths, monthFull, monthName, type TripPlan, type TripWarning } from "@/lib/trip";
 import { formatDays, shortDays, themeEmoji } from "@/lib/format";
 import { downloadFile, tripShareUrl, tripToIcs, tripToText } from "@/lib/export";
-import { googleRouteUrl, routeIsTruncated } from "@/lib/maps";
+import { googleRouteEmbedUrl, googleRouteUrl, mapsApiKey, routeIsTruncated } from "@/lib/maps";
 
 const WARNING_STYLE: Record<TripWarning["kind"], { ring: string; chip: string; label: string }> = {
   permit: { ring: "border-coral-400", chip: "bg-coral-100 text-coral-700", label: "Permit" },
@@ -65,6 +65,8 @@ export default function TripItinerary({
   const stops = plan.stops.map((s) => s.destination);
   const routeUrl = googleRouteUrl(stops);
   const truncated = routeIsTruncated(stops);
+  const apiKey = mapsApiKey();
+  const embedUrl = apiKey ? googleRouteEmbedUrl(stops, apiKey) : null;
 
   return (
     <div>
@@ -117,6 +119,18 @@ export default function TripItinerary({
           </a>
         )}
       </div>
+
+      {/* The whole route on a map, when the site has a Maps key. */}
+      {embedUrl && (
+        <iframe
+          title="Route map"
+          src={embedUrl}
+          className="mt-4 aspect-[16/9] w-full rounded-xl border-0 shadow-card print:hidden"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          allowFullScreen
+        />
+      )}
 
       {/* Controls */}
       <div className="mt-4 grid gap-3 rounded-xl border border-navy-100 bg-white p-4 shadow-card sm:grid-cols-2 print:hidden">

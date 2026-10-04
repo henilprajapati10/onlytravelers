@@ -77,6 +77,27 @@ export function googleRouteUrl(stops: Destination[]): string | null {
   return `${MAPS_BASE}/dir/?api=1&origin=${origin}&destination=${destination}${waypoints}&travelmode=driving`;
 }
 
+/**
+ * The same route as an embeddable map (Maps Embed API, directions mode).
+ * Needs a key, like the place embed; with the same 9-waypoint cap.
+ */
+export function googleRouteEmbedUrl(stops: Destination[], apiKey: string): string | null {
+  if (stops.length < 2) return null;
+  const point = (d: Destination) => {
+    const c = coordFor(d.slug);
+    return c ? `${c.lat},${c.lng}` : mapQuery(d);
+  };
+  const params = new URLSearchParams({
+    key: apiKey,
+    origin: point(stops[0]),
+    destination: point(stops[stops.length - 1]),
+    mode: "driving",
+  });
+  const middle = stops.slice(1, -1).slice(0, 9);
+  if (middle.length) params.set("waypoints", middle.map(point).join("|"));
+  return `https://www.google.com/maps/embed/v1/directions?${params.toString()}`;
+}
+
 /** True when the trip is longer than one Maps link can carry. */
 export function routeIsTruncated(stops: Destination[]): boolean {
   return stops.length > 11;

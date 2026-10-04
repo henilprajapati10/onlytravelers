@@ -27,19 +27,33 @@ export const MAP_ATTRIBUTION = "Boundaries: amCharts geodata (2023 divisions)";
 export function IndiaMap({
   activeStateId,
   linkStates = false,
+  fills,
+  onSelect,
+  caption = true,
   className = "",
+  svgId,
 }: {
   activeStateId?: string;
   /** Make every state a link to its page. */
   linkStates?: boolean;
+  /** Per-state fill colours, for maps that colour the country in (My India). */
+  fills?: Record<string, string>;
+  /** Make every state a button; wins over `linkStates`. */
+  onSelect?: (stateId: string) => void;
+  caption?: boolean;
   className?: string;
+  /** Lets a parent find the SVG, e.g. to download it. */
+  svgId?: string;
 }) {
+  const interactive = Boolean(onSelect) || linkStates;
   return (
     <figure className={className}>
       <svg
+        id={svgId}
+        xmlns="http://www.w3.org/2000/svg"
         viewBox={`0 0 ${INDIA_VIEWBOX.width} ${INDIA_VIEWBOX.height}`}
         className="h-auto w-full"
-        role="img"
+        role={onSelect ? "group" : "img"}
         aria-label={
           activeStateId
             ? `Map of India with ${getState(activeStateId)?.name ?? activeStateId} highlighted`
@@ -49,16 +63,41 @@ export function IndiaMap({
         {stateShapes.map((shape) => {
           const active = shape.id === activeStateId;
           const state = getState(shape.id);
+          const fill = fills?.[shape.id] ?? (active ? "#e8492a" : "#dbe3ee");
           const path = (
             <path
               d={shape.d}
-              fill={active ? "#e8492a" : "#dbe3ee"}
+              fill={fill}
               stroke={active ? "#c73820" : "#ffffff"}
               strokeWidth={active ? 1.6 : 1}
               strokeLinejoin="round"
-              className={linkStates ? "transition-[fill] hover:fill-[#b0c1d9]" : undefined}
+              className={interactive ? "transition-[fill] hover:opacity-80" : undefined}
             />
           );
+
+          if (onSelect && state) {
+            return (
+              <g
+                key={shape.id}
+                role="button"
+                tabIndex={0}
+                aria-label={state.name}
+                aria-pressed={fills ? shape.id in fills : undefined}
+                data-state={shape.id}
+                className="cursor-pointer outline-none focus-visible:opacity-70"
+                onClick={() => onSelect(shape.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelect(shape.id);
+                  }
+                }}
+              >
+                {path}
+                <title>{state.name}</title>
+              </g>
+            );
+          }
 
           if (!linkStates || !state) {
             return (
@@ -79,9 +118,11 @@ export function IndiaMap({
           );
         })}
       </svg>
-      <figcaption className="mt-2 text-center text-[11px] text-navy-400">
-        {MAP_ATTRIBUTION}
-      </figcaption>
+      {caption && (
+        <figcaption className="mt-2 text-center text-[11px] text-navy-400">
+          {MAP_ATTRIBUTION}
+        </figcaption>
+      )}
     </figure>
   );
 }

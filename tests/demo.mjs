@@ -17,9 +17,9 @@ const page = await ctx.newPage();
 const errs = [];
 page.on("pageerror", (e) => errs.push("PAGEERROR: " + e.message));
 page.on("console", (m) => {
-  // The Google Fonts request fails behind this sandbox's proxy; that is the
-  // environment, not the page.
-  if (m.type() === "error" && !/404|favicon|ERR_CERT_AUTHORITY_INVALID/.test(m.text()))
+  // Google Fonts and Open-Meteo are unreachable behind this sandbox's proxy;
+  // that is the environment, not the page (the weather slot reports it).
+  if (m.type() === "error" && !/404|favicon|ERR_CERT_AUTHORITY_INVALID|ERR_TUNNEL_CONNECTION_FAILED|ERR_NAME_NOT_RESOLVED/.test(m.text()))
     errs.push("CONSOLE: " + m.text());
 });
 
@@ -216,6 +216,51 @@ for (const h of ["#/", "#/start", "#/destinations", "#/circuits", "#/festivals",
   if (/(₹|Rs\.?\s?)\d[\d,]*\s*(per|each|onwards|entry|ticket|fee)/i.test(body)) priced.push(h);
 }
 ok("no page quotes a price", priced.length === 0, priced.join(", "));
+
+/* ---------- real outlines, Google Maps, nearby, weather, phrasebook ---------- */
+await go("#/destinations/taj-mahal-agra");
+const mapSvg = page.locator("svg[aria-label='Map of Uttar Pradesh']");
+ok("the detail page draws the real state outline", (await mapSvg.count()) === 1);
+const vb = (await mapSvg.getAttribute("viewBox")) || "";
+ok("with a sane viewBox", !/NaN/.test(vb) && vb.split(" ").length === 4, vb);
+ok("and a pin on the place", (await mapSvg.locator("circle").count()) >= 2);
+ok("Google Maps and directions links", (await page.locator("a[href*='google.com/maps/search']").count()) >= 1 && (await page.locator("a[href*='google.com/maps/dir']").count()) >= 1);
+ok("eight nearby links centred on the place", (await page.locator("[data-testid=nearby] a").count()) === 8 &&
+   /@27\.1\d+,78\.0\d+,15z/.test(await page.locator("[data-testid=nearby] a").first().getAttribute("href")));
+ok("a weather slot is present", (await page.locator("[data-weather]").count()) === 1);
+await page.waitForTimeout(1500);
+const dStatus = await page.locator("[data-weather]").getAttribute("data-status");
+ok("weather settles to ready or unavailable", dStatus === "ready" || dStatus === "unavailable", dStatus ?? "none");
+ok("the phrasebook is in Hindi here", (await page.locator("[data-testid=phrasebook]:has-text('Namaste')").count()) === 1);
+await go("#/states/kerala");
+const kerala = page.locator("svg[aria-label='Map of Kerala']");
+ok("a state page draws its outline with every pin", (await kerala.count()) === 1 && (await kerala.locator("circle").count()) >= 20);
+
+/* ---------- place of the day and My India ---------- */
+await go("#/");
+ok("home has a place of the day", (await page.locator("[data-testid=place-of-the-day]").count()) === 1);
+await go("#/profile");
+const before = (await page.locator("[data-testid=my-india-count]").innerText()).trim();
+ok("My India counts out of 36", /\/ 36/.test(before), before);
+await page.locator("[data-visit='kerala']").click();
+await page.waitForTimeout(300);
+const after = (await page.locator("[data-testid=my-india-count]").innerText()).trim();
+ok("tapping a state colours it in", Number(after[0]) === Number(before[0]) + 1, `${before} -> ${after}`);
+ok("and marks it pressed", (await page.locator("[data-visit='kerala']").getAttribute("aria-pressed")) === "true");
+await page.locator("[data-visit='kerala']").click();
+await page.waitForTimeout(300);
+ok("tapping again clears it", (await page.locator("[data-testid=my-india-count]").innerText()).trim() === before);
+
+/* ---------- budget ---------- */
+await go("#/trips");
+const open = page.locator("a[href^='#/trips/t']").first();
+const tripHref = await open.getAttribute("href");
+await go(tripHref.split("?")[0] + "?tab=spend");
+ok("the spend tab asks for a budget", (await page.locator("#budget-form").count()) === 1);
+await page.fill("#bd-amt", "10000");
+await page.locator("#budget-form button").click();
+await page.waitForTimeout(400);
+ok("setting a budget shows the burn", /of ₹10,000/.test(await page.locator("[data-testid=budget]").innerText()));
 
 /* ---------- phone shell ---------- */
 const m = await ctx.newPage();

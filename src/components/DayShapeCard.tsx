@@ -21,16 +21,19 @@ const PART_TIME: Record<DayPart, string> = {
 export default function DayShapeCard({
   destination,
   month,
+  tip,
   compact = false,
   showAdvice = true,
 }: {
   destination: Destination;
   month?: number;
+  /** The guide tip for this place, if the caller has it loaded. */
+  tip?: string;
   compact?: boolean;
   /** Off where the page already prints the tip in its own box. */
   showAdvice?: boolean;
 }) {
-  const shape = shapeForDestination(destination, month);
+  const shape = shapeForDestination(destination, month, tip);
 
   return (
     <div className="rounded-xl border border-navy-100 bg-white p-4 shadow-card">

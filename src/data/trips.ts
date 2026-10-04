@@ -21,6 +21,8 @@ export interface SavedTrip {
   daysAvailable?: number;
   /** ISO date the trip starts, once they have one. */
   startDate?: string;
+  /** What the traveller means to spend in total, in rupees. Theirs, never ours. */
+  budget?: number;
   notes?: string;
   createdAt: string;
   updatedAt: string;

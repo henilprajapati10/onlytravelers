@@ -15,6 +15,7 @@ import { kindLabel, providersFor } from "@/data/operators";
 import {
   EXPENSE_CATEGORIES,
   addExpense,
+  budgetBurn,
   formatRupees,
   loadExpenses,
   removeExpense,
@@ -585,6 +586,9 @@ export default function TripWorkspace() {
               expenses={expenses}
               setExpenses={setExpenses}
               days={plan?.totalDays ?? 0}
+              budget={trip.budget}
+              onBudget={(budget) => updateTrip(trip.id, { budget })}
+              daysIn={plan ? todayFor(trip, plan)?.dayNumber : undefined}
             />
           )}
         </div>
@@ -598,19 +602,29 @@ function SpendTab({
   expenses,
   setExpenses,
   days,
+  budget,
+  onBudget,
+  daysIn,
 }: {
   tripId: string;
   expenses: Expense[];
   setExpenses: (e: Expense[]) => void;
   days: number;
+  /** The traveller's own total, if they set one. */
+  budget?: number;
+  onBudget: (budget: number | undefined) => void;
+  /** Which day of the trip it is, when the trip is under way. */
+  daysIn?: number;
 }) {
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState<ExpenseCategory>("Food");
+  const [budgetDraft, setBudgetDraft] = useState(budget ? String(budget) : "");
 
   const total = sumExpenses(expenses);
   const byCategory = totalsByCategory(expenses);
   const perDay = days > 0 ? Math.round(total / days) : 0;
+  const burn = budgetBurn({ total, budget, days, daysIn });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -642,6 +656,59 @@ function SpendTab({
           </div>
           <div className="text-xs uppercase tracking-wide text-navy-400">entries</div>
         </div>
+      </div>
+
+      {/* The traveller's own number. We never suggest one — costs are theirs
+          to know and ours to never guess. */}
+      <div data-testid="budget" className="mt-5 rounded-xl border border-navy-100 bg-white p-4 shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-display text-sm font-semibold text-navy-800">Your budget for this trip</h2>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const v = Number(budgetDraft);
+              onBudget(Number.isFinite(v) && v > 0 ? Math.round(v) : undefined);
+            }}
+            className="flex items-center gap-2"
+          >
+            <input
+              value={budgetDraft}
+              onChange={(e) => setBudgetDraft(e.target.value)}
+              inputMode="numeric"
+              placeholder="₹ total you plan to spend"
+              aria-label="Budget in rupees"
+              className="w-44 rounded-lg border border-navy-200 px-3 py-2 text-sm tabular-nums text-navy-800 focus:border-coral-400 focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm font-semibold text-navy-700 hover:border-coral-300"
+            >
+              Set
+            </button>
+          </form>
+        </div>
+        {budget ? (
+          <div className="mt-3">
+            <div className="flex items-center justify-between text-xs text-navy-500">
+              <span>
+                {formatRupees(total)} of {formatRupees(budget)}
+                {burn.left >= 0 ? ` · ${formatRupees(burn.left)} left` : ` · ${formatRupees(-burn.left)} over`}
+              </span>
+              <span className="tabular-nums">{Math.min(999, burn.percent)}%</span>
+            </div>
+            <div className="mt-1 h-2 overflow-hidden rounded-full bg-navy-50" role="progressbar" aria-valuenow={Math.min(100, burn.percent)} aria-valuemin={0} aria-valuemax={100}>
+              <div
+                className={`h-full ${burn.percent > 100 ? "bg-coral-500" : burn.percent > 80 ? "bg-amber-400" : "bg-emerald-500"}`}
+                style={{ width: `${Math.min(100, burn.percent)}%` }}
+              />
+            </div>
+            {burn.note && <p className="mt-2 text-xs text-navy-600">{burn.note}</p>}
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-navy-400">
+            Set a total and this shows what is left, and whether the pace of spending fits the days remaining.
+          </p>
+        )}
       </div>
 
       <form onSubmit={submit} className="mt-5 rounded-xl border border-navy-100 bg-white p-4 shadow-card">
@@ -737,3 +804,4 @@ function SpendTab({
     </div>
   );
 }
+

@@ -22,7 +22,10 @@ page.on("console", (m) => {
   if (
     m.type() === "error" &&
     !/404|favicon/.test(m.text()) &&
-    !/Failed to fetch RSC payload/.test(m.text())
+    !/Failed to fetch RSC payload/.test(m.text()) &&
+    // Open-Meteo is unreachable behind this sandbox's proxy; the page
+    // reports it on the weather card, which the suite checks.
+    !/ERR_TUNNEL_CONNECTION_FAILED|ERR_NAME_NOT_RESOLVED|open-meteo/.test(m.text())
   ) {
     errs.push("CONSOLE: " + m.text());
   }
@@ -447,6 +450,71 @@ await page.goto(B + "/map-data", { waitUntil: "networkidle" });
 ok("the map register names its source and licence", (await page.locator("text=amCharts").count()) > 0 &&
    (await page.locator("text=linkware").count()) > 0);
 ok("and admits what the dataset is missing", (await page.locator("text=Lakshadweep").count()) > 0);
+
+/* ---------- on the ground: weather, nearby, phrasebook, Google Maps ---------- */
+await page.goto(B + "/destinations/taj-mahal-agra", { waitUntil: "networkidle" });
+await page.waitForTimeout(1500);
+const weather = page.locator("[data-testid=weather]");
+ok("a destination page carries a weather card", (await weather.count()) === 1);
+const wStatus = await weather.getAttribute("data-status");
+ok("the weather card settles to ready or unavailable, never a spinner", wStatus === "ready" || wStatus === "unavailable", wStatus ?? "none");
+if (wStatus === "unavailable") ok("and says so honestly when the service is unreachable", (await weather.innerText()).includes("could not be reached"));
+const nearbyLinks = page.locator("[data-testid=nearby] a");
+ok("eight nearby links", (await nearbyLinks.count()) === 8);
+const atmHref = await nearbyLinks.first().getAttribute("href");
+ok("nearby links open Google Maps centred on the place", /google\.com\/maps\/search\/ATM\/@27\.1\d+,78\.0\d+,15z/.test(atmHref), atmHref);
+ok("the phrasebook speaks the state's language", (await page.locator("[data-testid=phrasebook]:has-text('Namaste')").count()) === 1);
+ok("no phrasebook, nearby or weather text quotes a price",
+   !/₹\s?\d|\bRs\.?\s?\d|INR\s?\d/.test(await page.locator("aside").innerText()));
+
+/* ---------- habit: place of the day ---------- */
+await page.goto(B + "/", { waitUntil: "networkidle" });
+const potd = page.locator("[data-testid=place-of-the-day]");
+ok("home has a place of the day", (await potd.count()) === 1);
+const potdHref = await potd.locator("a").first().getAttribute("href");
+ok("that links to a real destination", /^\/destinations\/[a-z0-9-]+$/.test(potdHref ?? ""), potdHref ?? "none");
+const potdName = await potd.locator("h2").innerText();
+await page.goto(B + potdHref, { waitUntil: "networkidle" });
+ok("and the destination page matches it", (await page.locator("h1").first().innerText()) === potdName, potdName);
+
+/* ---------- My India ---------- */
+await page.goto(B + "/profile", { waitUntil: "networkidle" });
+await page.waitForTimeout(600);
+const myIndia = page.locator("[data-testid=my-india]");
+ok("the profile carries My India", (await myIndia.count()) === 1);
+const countBefore = await page.locator("[data-testid=my-india-count]").innerText();
+ok("it counts out of all 36 units", /\/ 36/.test(countBefore), countBefore);
+await myIndia.locator("svg g[aria-label='Kerala']").click();
+await page.waitForTimeout(300);
+const countAfter = await page.locator("[data-testid=my-india-count]").innerText();
+ok("tapping a state colours it in", countAfter.trim().startsWith(String(Number(countBefore.trim()[0]) + 1)), `${countBefore.trim()} -> ${countAfter.trim()}`);
+ok("and marks it pressed", (await myIndia.locator("svg g[aria-label='Kerala']").getAttribute("aria-pressed")) === "true");
+await page.reload({ waitUntil: "networkidle" });
+await page.waitForTimeout(600);
+ok("the tap survives a reload", (await page.locator("[data-testid=my-india-count]").innerText()) === countAfter);
+await page.locator("[data-testid=my-india] svg g[aria-label='Kerala']").click();
+await page.waitForTimeout(300);
+ok("tapping again clears it", (await page.locator("[data-testid=my-india-count]").innerText()) === countBefore);
+ok("the map can be downloaded", (await page.locator("button:has-text('Download my map')").count()) === 1);
+
+/* ---------- budget: the traveller's own number ---------- */
+await page.goto(B + "/trips", { waitUntil: "networkidle" });
+await page.waitForTimeout(500);
+await page.locator("text=Open trip").first().click();
+await page.waitForURL("**/trips/**", { timeout: 10000 });
+await page.locator("button:has-text('Spend')").first().click();
+await page.waitForTimeout(400);
+ok("the spend tab asks for a budget, never suggests one",
+   (await page.locator("[data-testid=budget]").count()) === 1 && (await page.locator("[data-testid=budget] input").inputValue()) === "");
+await page.locator("input[aria-label='Budget in rupees']").fill("10000");
+await page.locator("[data-testid=budget] button:has-text('Set')").click();
+await page.waitForTimeout(400);
+ok("setting a budget shows the burn", /of ₹\s?10,000/.test(await page.locator("[data-testid=budget]").innerText()), (await page.locator("[data-testid=budget]").innerText()).slice(0, 80));
+await page.reload({ waitUntil: "networkidle" });
+await page.waitForTimeout(600);
+await page.locator("button:has-text('Spend')").first().click();
+await page.waitForTimeout(400);
+ok("the budget is saved on the trip", (await page.locator("input[aria-label='Budget in rupees']").inputValue()) === "10000");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 console.log("errors:", errs.length ? errs.join("\n") : "none");

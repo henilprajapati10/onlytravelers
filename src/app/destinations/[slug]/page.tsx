@@ -14,6 +14,10 @@ import { pairsWellWith } from "@/lib/suggest";
 import { festivalsForSlug } from "@/data/festivals";
 import FestivalList from "@/components/FestivalList";
 import DayShapeCard from "@/components/DayShapeCard";
+import NearbyLinks from "@/components/NearbyLinks";
+import WeatherCard from "@/components/WeatherCard";
+import Phrasebook from "@/components/Phrasebook";
+import { essentialsFor } from "@/data/essentials";
 
 export function generateStaticParams() {
   return destinations.map((d) => ({ slug: d.slug }));
@@ -43,6 +47,7 @@ export default function DestinationPage({ params }: { params: { slug: string } }
     .slice(0, 3);
   const pairs = pairsWellWith(destination, 3);
   const localFestivals = festivalsForSlug(destination.slug);
+  const essentials = essentialsFor(destination.stateId);
 
   return (
     <article>
@@ -136,7 +141,7 @@ export default function DestinationPage({ params }: { params: { slug: string } }
               rhythm this place in particular repays.
             </p>
             {/* The tip already has its own box above; no need to print it twice. */}
-            <DayShapeCard destination={destination} compact showAdvice={false} />
+            <DayShapeCard destination={destination} tip={guide?.tip} compact showAdvice={false} />
 
             {localFestivals.length > 0 && (
               <>
@@ -287,6 +292,11 @@ export default function DestinationPage({ params }: { params: { slug: string } }
 
               {/* Map slot — 1:1 per the layout spec */}
               <PlaceMap destination={destination} />
+
+              {/* The second-app questions, answered here. */}
+              <WeatherCard destination={destination} />
+              <NearbyLinks destination={destination} />
+              {essentials && <Phrasebook languages={essentials.languages} />}
             </div>
           </aside>
         </div>
@@ -299,7 +309,7 @@ export default function DestinationPage({ params }: { params: { slug: string } }
             </p>
             <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {pairs.map((d) => (
-                <DestinationCard key={d.slug} destination={d} />
+                <DestinationCard key={d.slug} destination={d} summary={getGuide(d.slug)?.summary} />
               ))}
             </div>
           </div>
@@ -320,7 +330,7 @@ export default function DestinationPage({ params }: { params: { slug: string } }
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {nearby.map((d) => (
-                <DestinationCard key={d.slug} destination={d} />
+                <DestinationCard key={d.slug} destination={d} summary={getGuide(d.slug)?.summary} />
               ))}
             </div>
           </div>

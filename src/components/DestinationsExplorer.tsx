@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { destinations, themes, type Theme } from "@/data/destinations";
 import { states, zones, type Zone } from "@/data/states";
-import { guides } from "@/data/guides";
+import { useGuides } from "@/lib/useGuides";
 import { monthName } from "@/lib/trip";
 import DestinationCard from "./DestinationCard";
 
@@ -45,6 +45,10 @@ export default function DestinationsExplorer() {
     setVisible(PAGE_SIZE);
   }, [params]);
 
+  // Summaries arrive after first paint as a shared chunk; the list is
+  // complete without them and the text filter widens once they land.
+  const getGuide = useGuides();
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return destinations.filter((d) => {
@@ -55,13 +59,13 @@ export default function DestinationsExplorer() {
       if (month && !d.bestMonths.includes(month)) return false;
       if (maxDays && d.idealDays > maxDays) return false;
       if (q) {
-        const guide = guides[d.slug];
+        const guide = getGuide?.(d.slug);
         const hay = `${d.name} ${d.district} ${d.stateName} ${d.rawTheme} ${guide?.summary ?? ""}`;
         if (!hay.toLowerCase().includes(q)) return false;
       }
       return true;
     });
-  }, [query, zone, stateId, theme, month, maxDays, gemsOnly]);
+  }, [query, zone, stateId, theme, month, maxDays, gemsOnly, getGuide]);
 
   const stateOptions = useMemo(
     () => states.filter((s) => zone === "All" || s.zone === zone),
@@ -240,7 +244,11 @@ export default function DestinationsExplorer() {
         <>
           <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.slice(0, visible).map((destination) => (
-              <DestinationCard key={destination.slug} destination={destination} />
+              <DestinationCard
+                key={destination.slug}
+                destination={destination}
+                summary={getGuide?.(destination.slug)?.summary}
+              />
             ))}
           </div>
           {visible < filtered.length && (

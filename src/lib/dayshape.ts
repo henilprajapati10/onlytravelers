@@ -1,5 +1,4 @@
 import type { Destination, Theme } from "@/data/destinations";
-import { guides } from "@/data/guides";
 import type { TripStop } from "@/lib/trip";
 
 /**
@@ -150,13 +149,16 @@ const COOL_STATES = [
   "nagaland",
 ];
 
-export function shapeForDestination(destination: Destination, month?: number): DayShape {
+/**
+ * `tip` is the place's traveller tip from its guide, passed in by the caller
+ * so this module does not pull the whole guide corpus into client bundles.
+ */
+export function shapeForDestination(destination: Destination, month?: number, tip?: string): DayShape {
   const primary = destination.themes.find((t) => RHYTHMS[t]) ?? destination.themes[0];
   const rhythm = (primary && RHYTHMS[primary]) || DEFAULT_RHYTHM;
 
   const slots: DaySlot[] = PARTS.map((part) => ({ part, what: rhythm[part] }));
 
-  const tip = guides[destination.slug]?.tip;
   const adviceIn = tip ? partForAdvice(tip) : undefined;
 
   const hot =

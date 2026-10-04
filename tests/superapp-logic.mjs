@@ -5,6 +5,7 @@
  *   node tests/superapp-logic.mjs
  */
 import { loadModule } from "../scripts/ts-modules.mjs";
+import fs from "node:fs";
 
 
 const D = loadModule("src/data/destinations.ts");
@@ -132,6 +133,13 @@ ok("empty query returns nothing", Se.search("   ").length === 0);
 ok("nonsense returns nothing", Se.search("zzzqqxnothing").length === 0);
 ok("search is accent and punctuation tolerant", Se.search("mysuru palace").length > 0);
 ok("search respects the limit", Se.search("a", 5).length <= 5);
+{
+  const g = loadModule("src/data/guides/index.ts").getGuide;
+  ok("search accepts a guide lookup and still ranks names first",
+     Se.search("Taj Mahal", 12, g)[0]?.id === "taj-mahal-agra");
+  ok("a summary-only match is found when the guides are supplied",
+     Se.search("Taj Mahal", 12, g).length >= Se.search("Taj Mahal").length);
+}
 ok("multi-word narrows rather than widens",
    Se.search("kerala backwaters").length <= Se.search("kerala").length + Se.search("backwaters").length);
 
@@ -332,9 +340,12 @@ ok("no destination guide quotes a price", priced === 0, `${priced} found`);
 
 /* ---------- day shape ---------- */
 {
+  const guidesAll = loadModule("src/data/guides/index.ts").guides;
+  const tipOf = (d) => guidesAll[d.slug]?.tip;
+  const shapeOf = (d, month) => Ds.shapeForDestination(d, month, tipOf(d));
   let bad = 0;
   for (const d of D.destinations) {
-    const shape = Ds.shapeForDestination(d, 11);
+    const shape = shapeOf(d, 11);
     if (shape.slots.length !== 3) { bad++; continue; }
     if (shape.slots.map((s) => s.part).join(",") !== "Early,Midday,Evening") bad++;
     if (shape.slots.some((s) => !s.what || s.what.length < 20)) bad++;
@@ -343,15 +354,16 @@ ok("no destination guide quotes a price", priced === 0, `${priced} found`);
 
   const taj = D.destinations.find((d) => d.slug === "taj-mahal-agra");
   ok("the day shape carries the guide's own advice",
-     Ds.shapeForDestination(taj, 11).localAdvice === loadModule("src/data/guides/index.ts").guides["taj-mahal-agra"].tip);
+     shapeOf(taj, 11).localAdvice === guidesAll["taj-mahal-agra"].tip);
+  ok("without the guide loaded the day still has a shape, just no advice",
+     Ds.shapeForDestination(taj, 11).slots.length === 3 && Ds.shapeForDestination(taj, 11).localAdvice === undefined);
 
   // Most guide tips are not about timing at all ("bring a book", "hire the
   // official guide"), and forcing those into a slot would be the bug. What
   // matters is that advice which DOES name a time lands in the right part.
-  const guidesAll = loadModule("src/data/guides/index.ts").guides;
   const clockish = /\b(dawn|sunrise|sunset|dusk|morning|evening|afternoon|midday|noon|overnight|after dark|first light|\d{1,2}\s?[ap]m)\b/i;
   const timed = D.destinations.filter((d) => clockish.test(guidesAll[d.slug]?.tip ?? ""));
-  const misplaced = timed.filter((d) => !Ds.shapeForDestination(d, 11).adviceIn);
+  const misplaced = timed.filter((d) => !shapeOf(d, 11).adviceIn);
   misplaced.slice(0, 5).forEach((d) => console.log(`   unplaced: ${d.slug} — ${guidesAll[d.slug].tip.slice(0, 80)}`));
   ok("advice that names a time is placed in that part of the day",
      misplaced.length === 0, `${timed.length} timed, ${misplaced.length} unplaced`);
@@ -359,14 +371,150 @@ ok("no destination guide quotes a price", priced === 0, `${priced} found`);
   // And advice with no time reference is still shown, just not slotted.
   const untimed = D.destinations.find((d) => !clockish.test(guidesAll[d.slug]?.tip ?? ""));
   ok("untimed advice is still carried, just not slotted",
-     Boolean(Ds.shapeForDestination(untimed, 11).localAdvice));
+     Boolean(shapeOf(untimed, 11).localAdvice));
 
   ok("May in Rajasthan warns about the heat",
      Boolean(Ds.shapeForDestination(D.destinations.find((d) => d.slug === "jaisalmer-sam-sand-dunes"), 5).heatWarning));
   ok("May in Ladakh does not",
      !Ds.shapeForDestination(D.destinations.find((d) => d.slug === "pangong-tso"), 5).heatWarning);
   ok("no day shape quotes a price",
-     !D.destinations.some((d) => costLike.test(Ds.shapeForDestination(d, 11).slots.map((x) => x.what).join(" "))));
+     !D.destinations.some((d) => costLike.test(shapeOf(d, 11).slots.map((x) => x.what).join(" "))));
+}
+
+/* ---------- bundle discipline ---------- */
+{
+  // The guide corpus is ~400 KB of prose. Client components must reach it
+  // only through the lazy hook; a static import drags it into first-load JS.
+  const clientFiles = [
+    "src/lib/search.ts", "src/lib/dayshape.ts", "src/components/SearchOverlay.tsx",
+    "src/components/DestinationsExplorer.tsx", "src/components/DestinationCard.tsx",
+    "src/components/TodayCard.tsx", "src/components/DayShapeCard.tsx", "src/components/HomeHero.tsx",
+  ];
+  const leaks = clientFiles.filter((f) => /^import .*from "@\/data\/guides"/m.test(fs.readFileSync(f, "utf8")));
+  ok("no client module statically imports the guides", leaks.length === 0, leaks.join(", "));
+  ok("the lazy hook is the one place that imports them dynamically",
+     /import\("@\/data\/guides"\)/.test(fs.readFileSync("src/lib/useGuides.ts", "utf8")));
+}
+
+/* ---------- on the ground: weather, nearby, phrases ---------- */
+{
+  const W = loadModule("src/lib/weather.ts");
+  const fixture = {
+    current: { temperature_2m: 31.6, weather_code: 3 },
+    daily: {
+      time: ["2026-10-04", "2026-10-05", "2026-10-06"],
+      temperature_2m_max: [33.1, 34.8, 29.2],
+      temperature_2m_min: [24.0, 25.1, 22.7],
+      precipitation_probability_max: [10, 70, 80],
+      weather_code: [2, 61, 95],
+    },
+  };
+  const f = W.parseForecast(fixture, 1000);
+  ok("forecast parses a real Open-Meteo shape", f && f.nowC === 32 && f.days.length === 3 && f.fetchedAt === 1000);
+  ok("forecast rows carry rounded highs, lows and rain chance",
+     f.days[1].maxC === 35 && f.days[1].minC === 25 && f.days[1].rainChance === 70 && f.days[1].code === 61);
+  ok("a missing column returns null rather than a half forecast",
+     W.parseForecast({ ...fixture, daily: { ...fixture.daily, weather_code: undefined } }) === null);
+  ok("mismatched column lengths return null",
+     W.parseForecast({ ...fixture, daily: { ...fixture.daily, temperature_2m_min: [1] } }) === null);
+  ok("garbage returns null", W.parseForecast(null) === null && W.parseForecast("x") === null && W.parseForecast({}) === null);
+  ok("null precipitation probability reads as 0",
+     W.parseForecast({ ...fixture, daily: { ...fixture.daily, precipitation_probability_max: [null, null, null] } }).days[0].rainChance === 0);
+  ok("WMO codes describe", W.describeCode(0).label === "Clear" && W.describeCode(95).label === "Thunderstorm" && W.describeCode(63).label === "Rain" && W.describeCode(999).label === "—");
+  ok("two wet days of three gives the rain advice", /Rain is likely/.test(W.forecastAdvice(f)));
+  ok("a 41° day gives the heat advice",
+     /40°C/.test(W.forecastAdvice({ ...f, days: [{ ...f.days[0], maxC: 41, rainChance: 0 }, f.days[0], f.days[0]] })));
+  ok("a mild day gives no advice",
+     W.forecastAdvice({ ...f, days: [{ date: "2026-10-04", maxC: 28, minC: 18, rainChance: 10, code: 1 }] }) === undefined);
+  ok("freshness respects the TTL", W.isFresh({ fetchedAt: 0 }, W.WEATHER_TTL_MS - 1) && !W.isFresh({ fetchedAt: 0 }, W.WEATHER_TTL_MS + 1) && !W.isFresh(null));
+  const u = new URL(W.forecastUrl(27.17, 78.04));
+  ok("forecast URL asks Open-Meteo for current and daily in IST",
+     u.host === "api.open-meteo.com" && u.searchParams.get("timezone") === "Asia/Kolkata" && u.searchParams.get("latitude") === "27.17" && /weather_code/.test(u.searchParams.get("daily")));
+  ok("no forecast text quotes a price", !costLike.test([W.forecastAdvice(f), W.describeCode(61).label].join(" ")));
+
+  const N = loadModule("src/lib/nearby.ts");
+  const taj = D.destinations.find((d) => d.slug === "taj-mahal-agra");
+  const links = N.nearbyLinks(taj);
+  ok("eight nearby kinds", links.length === 8 && N.NEARBY_KINDS.some((k) => k.id === "hospital") && N.NEARBY_KINDS.some((k) => k.id === "atm"));
+  ok("nearby links centre on the coordinate at street zoom",
+     links.every((l) => /^https:\/\/www\.google\.com\/maps\/search\/[^/]+\/@27\.17\d+,78\.04\d+,15z$/.test(l.url)), links[0].url);
+  const C = loadModule("src/data/coords.ts");
+  const noCoord = D.destinations.find((d) => !C.coordFor(d.slug));
+  ok("a place without a coordinate searches by name instead",
+     noCoord && N.nearbyUrl(noCoord, N.NEARBY_KINDS[0]).includes("api=1&query=ATM%20near%20") && N.nearbyUrl(noCoord, N.NEARBY_KINDS[0]).includes(encodeURIComponent(noCoord.name)));
+
+  const P = loadModule("src/data/phrases.ts");
+  const E = loadModule("src/data/essentials.ts");
+  const langs = Object.keys(P.PHRASES);
+  ok("every phrasebook language has all eight phrases",
+     langs.every((l) => P.PHRASE_SET.every((p) => typeof P.PHRASES[l][p.id] === "string" && P.PHRASES[l][p.id].length > 0)));
+  // A state falls through to English only when English is on its own list.
+  const uncovered = S.states.filter((s) => {
+    const langs = E.ESSENTIALS[s.id]?.languages ?? [];
+    return P.phrasebookFor(langs).length === 0 && !langs.includes("English");
+  });
+  ok("every state has a phrasebook language or lists English", uncovered.length === 0, uncovered.map((s) => s.id).join(", "));
+  ok("phrasebook keeps the state's own language order",
+     P.phrasebookFor(["Kannada", "Hindi", "Tulu"]).map((b) => b.language).join(",") === "Kannada,Hindi");
+}
+
+/* ---------- habit: place of the day, streak, My India ---------- */
+{
+  const Dy = loadModule("src/lib/daily.ts");
+  const a = Dy.placeOfTheDay(new Date(2026, 9, 4));
+  const b = Dy.placeOfTheDay(new Date(2026, 9, 4, 23, 59));
+  const c = Dy.placeOfTheDay(new Date(2026, 9, 5));
+  ok("the place of the day is the same all day", a.slug === b.slug);
+  ok("and changes at midnight", a.slug !== c.slug);
+  ok("recent places start with today and go back", Dy.recentPlaces(3, new Date(2026, 9, 5))[0].slug === c.slug && Dy.recentPlaces(3, new Date(2026, 9, 5))[1].slug === a.slug);
+  // Over a year, the quiet half of the catalogue must get its share.
+  let gems = 0; const seen = new Set();
+  for (let i = 0; i < 365; i++) { const p = Dy.placeOfTheDay(new Date(2026, 0, 1 + i)); seen.add(p.slug); if (p.hiddenGem) gems++; }
+  ok("a year of places does not repeat", seen.size === 365);
+  ok("hidden gems appear in rough proportion", gems > 60 && gems < 140, `${gems} gems in 365 days`);
+  const s1 = Dy.advanceStreak(Dy.EMPTY_STREAK, 100);
+  const s2 = Dy.advanceStreak(s1, 101);
+  const s3 = Dy.advanceStreak(s2, 101);
+  const s4 = Dy.advanceStreak(s2, 105);
+  ok("streak counts consecutive days", s1.current === 1 && s2.current === 2 && s2.longest === 2 && s2.seen === 2);
+  ok("a second open on the same day changes nothing", s3 === s2);
+  ok("a gap resets the streak but keeps the record", s4.current === 1 && s4.longest === 2 && s4.seen === 3);
+
+  const V = loadModule("src/lib/visited.ts");
+  const done = { id: "t1", name: "x", slugs: ["taj-mahal-agra", "munnar"], status: "completed", createdAt: "", updatedAt: "" };
+  const planned = { ...done, id: "t2", slugs: ["pangong-tso"], status: "planning" };
+  const sum = V.summariseVisited(["goa"], [done, planned]);
+  ok("completed trips colour their states; planned ones do not",
+     sum.ids.has("uttar-pradesh") && sum.ids.has("kerala") && sum.ids.has("goa") && !sum.ids.has("ladakh"));
+  ok("counts and percent are of all 36 units", sum.total === S.states.length && sum.count === 3 && sum.percent === Math.round(300 / S.states.length));
+  const ne = S.zones.find((z) => /north/i.test(z) && /east/i.test(z));
+  const south = S.zones.find((z) => /south/i.test(z));
+  ok("untouched zones are named", sum.untouchedZones.includes(ne) && !sum.untouchedZones.includes(south), sum.untouchedZones.join(", "));
+  ok("the tap list drops unknown ids", V.summariseVisited(["nowhere"], []).count === 0);
+}
+
+/* ---------- money that is theirs, not ours ---------- */
+{
+  const X = loadModule("src/lib/expenses.ts");
+  ok("no budget means no burn", X.budgetBurn({ total: 500, days: 5 }).percent === 0);
+  const b = X.budgetBurn({ total: 4000, budget: 10000, days: 5, daysIn: 2 });
+  ok("budget burn tracks what is left", b.left === 6000 && b.percent === 40 && /Day 2 of 5/.test(b.note));
+  ok("spending ahead of pace is called out",
+     /running ahead/.test(X.budgetBurn({ total: 7000, budget: 10000, days: 5, daysIn: 2 }).note));
+  ok("over budget says so", /Over budget/.test(X.budgetBurn({ total: 12000, budget: 10000, days: 5, daysIn: 3 }).note));
+  ok("before the trip, the budget is just a daily figure", /a day across 5 days/.test(X.budgetBurn({ total: 0, budget: 10000, days: 5 }).note));
+  ok("a trip that has not started never shows a negative day",
+     /a day across 9 days/.test(X.budgetBurn({ total: 250, budget: 10000, days: 9, daysIn: -31 }).note));
+  ok("nor does a finished one", /a day across 9 days/.test(X.budgetBurn({ total: 250, budget: 10000, days: 9, daysIn: 12 }).note));
+
+  const M = loadModule("src/lib/maps.ts");
+  const stops = [D.destinations.find((d) => d.slug === "taj-mahal-agra"), ...D.destinations.filter((d) => d.stateId === "rajasthan").slice(0, 2)];
+  const e = new URL(M.googleRouteEmbedUrl(stops, "KEY"));
+  ok("route embed uses the directions mode with origin, destination and waypoints",
+     e.pathname === "/maps/embed/v1/directions" && e.searchParams.get("key") === "KEY" && e.searchParams.get("origin").startsWith("27.17") && e.searchParams.get("waypoints").length > 0 && e.searchParams.get("mode") === "driving");
+  ok("route embed needs two stops", M.googleRouteEmbedUrl(stops.slice(0, 1), "KEY") === null);
+  const many = D.destinations.slice(0, 20);
+  ok("route embed caps waypoints at nine", new URL(M.googleRouteEmbedUrl(many, "KEY")).searchParams.get("waypoints").split("|").length === 9);
 }
 
 /* ---------- the expanded catalogue ---------- */

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { search, SEARCH_SUGGESTIONS, type SearchResult } from "@/lib/search";
 import { useCart } from "@/context/TripsContext";
 import { readJson, writeJson } from "@/lib/storage";
+import { useGuides } from "@/lib/useGuides";
 
 const RECENT_KEY = "onlytravelers.recentSearches.v1";
 const MAX_RECENT = 6;
@@ -31,7 +32,9 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const results = useMemo(() => search(query), [query]);
+  // Guide prose arrives after first paint; results are complete without it.
+  const guide = useGuides(open);
+  const results = useMemo(() => search(query, 12, guide), [query, guide]);
 
   useEffect(() => {
     if (!open) return;

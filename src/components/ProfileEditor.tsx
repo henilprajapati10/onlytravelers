@@ -7,6 +7,7 @@ import { COMPANY_OPTIONS, PACE_OPTIONS, STAY_OPTIONS } from "@/data/profile";
 import { themes } from "@/data/destinations";
 import { themeEmoji } from "@/lib/format";
 import { STORAGE_KEYS } from "@/lib/storage";
+import MyIndiaMap from "./MyIndiaMap";
 
 export default function ProfileEditor() {
   const { profile, updateProfile, resetProfile, isHydrated } = useProfile();
@@ -56,6 +57,8 @@ export default function ProfileEditor() {
       </div>
 
       <div className="mt-6 flex flex-col gap-5">
+        <MyIndiaMap />
+
         <section className={card}>
           <h2 className="font-display font-semibold text-navy-800">The basics</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">

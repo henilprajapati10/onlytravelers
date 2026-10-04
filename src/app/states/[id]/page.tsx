@@ -3,6 +3,7 @@ import Link from "next/link";
 import { states, getState } from "@/data/states";
 import { destinationsInState } from "@/data/destinations";
 import DestinationCard from "@/components/DestinationCard";
+import { getGuide } from "@/data/guides";
 import { StateOutline } from "@/components/IndiaMap";
 import { coordFor } from "@/data/coords";
 import { googleRouteUrl } from "@/lib/maps";
@@ -131,7 +132,7 @@ export default function StatePage({ params }: { params: { id: string } }) {
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((d) => (
-            <DestinationCard key={d.slug} destination={d} />
+            <DestinationCard key={d.slug} destination={d} summary={getGuide(d.slug)?.summary} />
           ))}
         </div>
       </div>

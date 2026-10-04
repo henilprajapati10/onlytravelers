@@ -2,7 +2,6 @@ import { destinations, themes, type Theme } from "@/data/destinations";
 import { states, zones } from "@/data/states";
 import { circuits } from "@/data/circuits";
 import { festivals } from "@/data/festivals";
-import { guides } from "@/data/guides";
 import { renownScore } from "@/data/renown";
 
 /**
@@ -123,14 +122,22 @@ const ACTIONS: { id: string; title: string; subtitle: string; href: string; keyw
   },
 ];
 
-export function search(query: string, limit = 12): SearchResult[] {
+/**
+ * Optional access to the guide prose, so a query can match a summary. The
+ * guides are loaded lazily on the client (see lib/useGuides), so a caller
+ * passes whatever it has; without it, search still covers names, districts,
+ * states and themes.
+ */
+export type SummaryLookup = (slug: string) => { summary: string } | undefined;
+
+export function search(query: string, limit = 12, lookup?: SummaryLookup): SearchResult[] {
   const terms = tokens(query);
   if (!terms.length) return [];
 
   const out: SearchResult[] = [];
 
   for (const d of destinations) {
-    const guide = guides[d.slug];
+    const guide = lookup?.(d.slug);
     const score = best(
       matchScore(d.name, terms, 100),
       matchScore(`${d.name} ${d.district}`, terms, 70),
