@@ -58,6 +58,7 @@ caches visited pages on the device for the hills and the islands.
 | Google Maps Embed API | Inline map on a destination page and the route on a trip | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Free tier; restrict the key by referrer (see `.env.example`) |
 | Open-Meteo | Live weather on a destination page and the Today card | No | Free for non-commercial; commercial plans exist. Device fetches directly, cached per place for an hour |
 | amCharts geodata | State boundaries | No | Free with attribution (shown on every map) |
+| OpenStreetMap tiles (Leaflet) | The pannable map on state and destination pages | No | Public servers are for light use only — set `NEXT_PUBLIC_MAP_TILES_URL` to a tile provider before heavy traffic (see `.env.example`); Leaflet itself is a 40 KB chunk loaded only on map pages |
 
 Nothing is proxied through our servers, so none of it adds to our request
 load. If a service is down the page is complete without it: weather says so,
@@ -66,7 +67,9 @@ maps fall back to our own outline, links still open Google.
 ## Environment
 
 ```
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=   # optional; enables embedded maps
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=      # optional; enables embedded Google maps
+NEXT_PUBLIC_MAP_TILES_URL=            # optional; tile provider for the live maps (default: OpenStreetMap)
+NEXT_PUBLIC_MAP_TILES_ATTRIBUTION=    # required by most providers when the URL is set
 ```
 
 ## Checks before a deploy

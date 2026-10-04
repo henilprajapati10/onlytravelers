@@ -517,6 +517,40 @@ ok("no destination guide quotes a price", priced === 0, `${priced} found`);
   ok("route embed caps waypoints at nine", new URL(M.googleRouteEmbedUrl(many, "KEY")).searchParams.get("waypoints").split("|").length === 9);
 }
 
+/* ---------- the accurate map: boundaries back in lat/lng ---------- */
+{
+  const G = loadModule("src/lib/geo.ts");
+  const Sh = loadModule("src/data/shapes.ts");
+  const pt = Sh.projectToIndia(76.2711, 9.9312); // Kochi
+  const back = G.unprojectFromIndia(pt.x, pt.y);
+  ok("unprojecting inverts the projection", Math.abs(back[0] - 9.9312) < 1e-4 && Math.abs(back[1] - 76.2711) < 1e-4, back.join(","));
+  const kerala = G.stateRings("kerala");
+  ok("Kerala is one ring of many points", kerala.length === 1 && kerala[0].length > 50, `${kerala.length} rings`);
+  ok("every Kerala vertex lies in Kerala's box",
+     kerala[0].every(([lat, lng]) => lat > 8 && lat < 13 && lng > 74.5 && lng < 77.6));
+  // The source dataset carries one Lakshadweep island (see DATASET_GAPS on /map-data).
+  ok("Lakshadweep has at least the island the dataset carries", G.stateRings("lakshadweep").length >= 1);
+  ok("Andaman & Nicobar is many islands", G.stateRings("andaman-nicobar-islands").length >= 5);
+  const b = G.stateBounds("rajasthan");
+  ok("state bounds are south-west / north-east", b && b[0][0] < b[1][0] && b[0][1] < b[1][1] && b[0][0] > 23 && b[1][0] < 30.5, JSON.stringify(b));
+  ok("an unknown state has no rings and no bounds", G.stateRings("atlantis").length === 0 && G.stateBounds("atlantis") === null);
+  // Every pinned destination should sit inside (or within 25 km of) its state's bounds.
+  // Non-contiguous units (Diu, Mahe, Yanam…) and the Lakshadweep islands the
+  // dataset lacks legitimately sit outside the drawn boundary; the live map
+  // fits to pins as well as boundary so they are still on screen.
+  const C = loadModule("src/data/coords.ts");
+  const gaps = new Set(C.DATASET_GAPS.map((g) => g.slug));
+  let outside = 0;
+  for (const d of D.destinations) {
+    if (gaps.has(d.slug) || S.getState(d.stateId)?.nonContiguous) continue;
+    const c = C.coordFor(d.slug); const bb = G.stateBounds(d.stateId);
+    if (!c || !bb) continue;
+    const pad = 0.25;
+    if (c.lat < bb[0][0] - pad || c.lat > bb[1][0] + pad || c.lng < bb[0][1] - pad || c.lng > bb[1][1] + pad) outside++;
+  }
+  ok("every pin in a contiguous state falls within its unprojected bounds", outside === 0, `${outside} outside`);
+}
+
 /* ---------- the expanded catalogue ---------- */
 {
   const all = D.destinations;

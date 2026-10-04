@@ -25,6 +25,9 @@
   const { placeOfTheDay, dayIndex, advanceStreak, EMPTY_STREAK } = OT.daily;
   const { summariseVisited } = OT.visited;
   const { budgetBurn } = OT.expenses;
+  const { stateRings } = OT.geo;
+  const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+  const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
   const MAP_ATTRIBUTION = "Boundaries: amCharts geodata (2023 divisions)";
   const VISITED_KEY = "onlytravelers.demo.visited.v1";
   const STREAK_KEY = "onlytravelers.demo.streak.v1";
@@ -255,6 +258,61 @@
       ${pinMarks}
     </svg>
     <p class="mt-1 text-center text-[10px] txt-faint">${MAP_ATTRIBUTION}</p>`;
+  }
+
+  /**
+   * The accurate map: street tiles under the real boundary, with pins where
+   * the places are. Leaflet comes from a CDN; if it has not loaded (offline,
+   * blocked), the drawn outline underneath simply stays.
+   */
+  let mapSeq = 0;
+  const pendingMaps = {};
+  function liveMapSlot(stateId, pins, center, zoom, heightClass) {
+    const id = "livemap-" + (++mapSeq);
+    pendingMaps[id] = { stateId, pins: pins || [], center, zoom: zoom || 12 };
+    return `<div id="${id}" data-livemap="${esc(stateId)}" class="relative overflow-hidden rounded-lg ${heightClass || "h-[380px]"}">
+      <div data-fallback class="absolute inset-0">${stateMap(stateId, pins)}</div>
+      <div data-map class="absolute inset-0" style="opacity:0;transition:opacity .2s"></div>
+    </div>`;
+  }
+
+  function mountMaps() {
+    const L = window.L;
+    for (const id of Object.keys(pendingMaps)) {
+      const cfg = pendingMaps[id];
+      delete pendingMaps[id];
+      const host = document.getElementById(id);
+      if (!host || !L) continue;
+      const box = host.querySelector("[data-map]");
+      const st = getState(cfg.stateId);
+      try {
+        const map = L.map(box, { scrollWheelZoom: false });
+        map.attributionControl.setPrefix(false);
+        L.tileLayer(TILE_URL, { maxZoom: 18, attribution: TILE_ATTRIBUTION + " · " + MAP_ATTRIBUTION }).addTo(map);
+        const rings = stateRings(cfg.stateId);
+        const boundary = rings.length ? L.polygon(rings, { color: "#e8492a", weight: 2, fillColor: "#e8492a", fillOpacity: 0.06 }).addTo(map) : null;
+        cfg.pins.forEach((p) => {
+          const m = L.circleMarker([p.lat, p.lng], { radius: cfg.center ? 9 : 6, color: "#fff", weight: 2, fillColor: "#0b1b30", fillOpacity: 1 }).addTo(map);
+          m.bindPopup(p.href ? `<a href="${p.href}" style="font-weight:600;color:#0b1b30">${esc(p.label)} →</a>` : `<span style="font-weight:600">${esc(p.label)}</span>`);
+          m.bindTooltip(p.label, { direction: "top", offset: [0, -6] });
+        });
+        if (cfg.center) map.setView([cfg.center.lat, cfg.center.lng], cfg.zoom);
+        else {
+          const bounds = L.latLngBounds(cfg.pins.map((p) => [p.lat, p.lng]));
+          if (boundary) bounds.extend(boundary.getBounds());
+          if (bounds.isValid()) map.fitBounds(bounds, { padding: [16, 16] });
+        }
+        box.setAttribute("role", "region");
+        box.setAttribute("aria-label", "Map of " + (st ? st.name : cfg.stateId));
+        box.style.opacity = "1";
+        const fb = host.querySelector("[data-fallback]");
+        if (fb) fb.remove();
+        host.dataset.live = "1";
+      } catch (err) {
+        // Leave the outline in place; the map is a bonus, not the page.
+        box.remove();
+      }
+    }
   }
 
   /** The whole country, coloured by `fills`; each state is tappable when `tappable`. */
@@ -689,7 +747,7 @@
               </div>
               <div class="rounded-2xl border bd surface p-4 shadow-card">
                 <h3 class="mb-2 font-display text-xs font-semibold uppercase tracking-wide txt-faint">Where it is</h3>
-                ${stateMap(st.id, coord ? [{ lat: coord.lat, lng: coord.lng, label: d.name }] : [])}
+                ${liveMapSlot(st.id, coord ? [{ lat: coord.lat, lng: coord.lng, label: d.name }] : [], coord || null, 12, "aspect-square")}
                 <p class="mt-2 text-xs txt-faint">${esc(d.district)}, ${esc(st.name)}${coord ? ` · <span class="tabular-nums">${coord.lat.toFixed(4)}°N, ${coord.lng.toFixed(4)}°E</span>` : ""}</p>
                 <div class="mt-3 flex flex-wrap gap-2">
                   <a href="${googleMapsPinUrl(d)}" target="_blank" rel="noopener noreferrer" class="rounded-lg border bd surface px-3 py-1.5 text-xs font-semibold txt">📍 Open in Google Maps ↗</a>
@@ -776,7 +834,8 @@
               </div>
               ${st.routingNote ? `<p class="mt-3 rounded-lg border-l-4 bd surface-alt p-3 text-sm txt-muted"><strong>Routing note:</strong> best travelled as part of ${esc(st.routingNote)}, not as a standalone trip.</p>` : ""}
             </div>
-            <div>${stateMap(st.id, list.map((d) => { const c = coordFor(d.slug); return c ? { lat: c.lat, lng: c.lng, label: d.name } : null; }).filter(Boolean))}<p class="mt-2 text-center text-xs txt-faint">${esc(st.capital)} · ${st.lat.toFixed(2)}°N, ${st.lng.toFixed(2)}°E</p></div>
+            <div>${liveMapSlot(st.id, list.map((d) => { const c = coordFor(d.slug); return c ? { lat: c.lat, lng: c.lng, label: d.name, href: "#/destinations/" + d.slug } : null; }).filter(Boolean), null, 7, "h-[380px] sm:h-[440px]")}<p class="mt-2 text-center text-xs txt-faint">${esc(st.capital)} · ${st.lat.toFixed(2)}°N, ${st.lng.toFixed(2)}°E</p>
+              <div class="mt-2 flex justify-center"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(st.name + ", India")}" target="_blank" rel="noopener noreferrer" class="rounded-lg border bd surface px-3 py-1.5 text-xs font-semibold txt">📍 ${esc(st.name)} in Google Maps ↗</a></div></div>
           </div>
         </div>
       </div>
@@ -1847,6 +1906,7 @@
     badge();
     syncTabs(r.view);
     fillWeather();
+    mountMaps();
     if (r.view === "festivals" && r.month) {
       const target = document.getElementById("month-" + r.month);
       if (target) { target.scrollIntoView({ block: "start" }); return; }

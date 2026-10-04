@@ -233,8 +233,17 @@ const dStatus = await page.locator("[data-weather]").getAttribute("data-status")
 ok("weather settles to ready or unavailable", dStatus === "ready" || dStatus === "unavailable", dStatus ?? "none");
 ok("the phrasebook is in Hindi here", (await page.locator("[data-testid=phrasebook]:has-text('Namaste')").count()) === 1);
 await go("#/states/kerala");
-const kerala = page.locator("svg[aria-label='Map of Kerala']");
-ok("a state page draws its outline with every pin", (await kerala.count()) === 1 && (await kerala.locator("circle").count()) >= 20);
+// Leaflet comes from a CDN the sandbox may block; either way the outline is
+// there first and the live map, when it mounts, takes over.
+const hasLeaflet = await page.evaluate(() => Boolean(window.L));
+if (hasLeaflet) {
+  await page.waitForTimeout(800);
+  ok("a state page mounts the accurate map with every pin", (await page.locator("[data-livemap] .leaflet-interactive").count()) >= 11);
+} else {
+  const kerala = page.locator("svg[aria-label='Map of Kerala']");
+  ok("a state page draws its outline with every pin (Leaflet unavailable here)", (await kerala.count()) === 1 && (await kerala.locator("circle").count()) >= 20);
+}
+ok("the state links out to Google Maps", (await page.locator("a[href*='google.com/maps/search'][href*='Kerala']").count()) >= 1);
 
 /* ---------- place of the day and My India ---------- */
 await go("#/");

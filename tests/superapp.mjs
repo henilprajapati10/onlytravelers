@@ -431,8 +431,10 @@ ok("the gems filter is reachable by URL", await page.locator("#filter-gems[aria-
 await page.goto(B + "/destinations/shekhawati-mandawa-nawalgarh", { waitUntil: "networkidle" });
 ok("an added destination renders its guide", (await page.locator("text=Travel by bicycle, text=bicycle").count()) > 0 ||
    (await page.locator("text=havelis").count()) > 0);
-ok("an added destination has a map with its pin", (await page.locator("figure svg circle").count()) >= 1);
-ok("and the attribution under it", (await page.locator("figcaption:has-text('amCharts')").count()) >= 1);
+await page.waitForTimeout(1200);
+ok("an added destination has the accurate map centred on it", (await page.locator("[data-testid=live-map] .leaflet-interactive").count()) >= 2);
+ok("and the attribution on it", (await page.locator("[data-testid=live-map] .leaflet-control-attribution:has-text('amCharts')").count()) >= 1 &&
+   (await page.locator("[data-testid=live-map] .leaflet-control-attribution:has-text('OpenStreetMap')").count()) >= 1);
 ok("the Google Maps link names the place and the country", (await page.locator("a[href*='google.com/maps/search']").first().getAttribute("href")).includes("India"));
 
 await page.goto(B + "/states", { waitUntil: "networkidle" });
@@ -440,11 +442,28 @@ ok("the states page draws the whole country", (await page.locator("figure svg pa
 await page.locator("figure svg a[aria-label='Kerala']").click();
 await page.waitForURL("**/states/kerala", { timeout: 10000 });
 ok("clicking a state on the map opens it", page.url().endsWith("/states/kerala"));
-ok("the state page pins its destinations", (await page.locator("figure svg a circle").count()) >= 10);
+await page.waitForTimeout(1200);
+ok("the state page draws the accurate map with its boundary and every pin",
+   (await page.locator("[data-testid=live-map] .leaflet-interactive").count()) >= 11);
+ok("the outline fallback steps aside once the tiles map is up", (await page.locator("figure svg a circle").count()) === 0);
+// A Leaflet pin is an SVG path under the polygon's hit area; a dispatched
+// click is what a real tap delivers without Playwright's stability checks.
+await page.locator("[data-testid=live-map] path.leaflet-interactive").nth(1).dispatchEvent("click");
+await page.waitForTimeout(300);
+const popupHref = await page.locator(".leaflet-popup a").first().getAttribute("href");
+ok("tapping a pin names the place and links to it", /^\/destinations\//.test(popupHref ?? ""), popupHref ?? "none");
+ok("and Google Maps is one tap away for the state", (await page.locator("a[href*='google.com/maps/search'][href*='Kerala']").count()) >= 1);
 ok("and offers the route in Google Maps", (await page.locator("a[href*='google.com/maps/dir']").count()) >= 1);
 
+// Server HTML carries the drawn outline with its locator inset (the no-JS
+// view); once the live map mounts it fits to every island the dataset lacks.
+const ssr = await (await page.request.get(B + "/states/lakshadweep")).text();
+ok("an island territory gets a locator inset in the server-rendered outline",
+   (ssr.match(/<svg/g) ?? []).length >= 2 && /amCharts/.test(ssr));
 await page.goto(B + "/states/lakshadweep", { waitUntil: "networkidle" });
-ok("an island territory gets a locator inset", (await page.locator("figure svg").count()) >= 2);
+await page.waitForTimeout(1200);
+ok("the live map keeps every Lakshadweep island on screen, dataset gap or not",
+   (await page.locator("[data-testid=live-map] .leaflet-interactive").count()) >= 5);
 
 await page.goto(B + "/map-data", { waitUntil: "networkidle" });
 ok("the map register names its source and licence", (await page.locator("text=amCharts").count()) > 0 &&

@@ -61,6 +61,7 @@ const ENTRIES = [
   "src/lib/daily.ts",
   "src/lib/visited.ts",
   "src/lib/expenses.ts",
+  "src/lib/geo.ts",
 ];
 
 /** Resolve an import the way the bundler would, relative to the repo root. */
@@ -180,6 +181,7 @@ ${registry}
     daily: __req("@/lib/daily"),
     visited: __req("@/lib/visited"),
     expenses: __req("@/lib/expenses"),
+    geo: __req("@/lib/geo"),
   };
 })();
 `;

@@ -15,12 +15,14 @@
     "test:super": "node tests/superapp.mjs"
   },
   "dependencies": {
+    "leaflet": "^1.9.4",
     "next": "14.2.35",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "devDependencies": {
     "@amcharts/amcharts4-geodata": "^4.1.32",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "20.14.10",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",

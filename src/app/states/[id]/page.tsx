@@ -5,8 +5,9 @@ import { destinationsInState } from "@/data/destinations";
 import DestinationCard from "@/components/DestinationCard";
 import { getGuide } from "@/data/guides";
 import { StateOutline } from "@/components/IndiaMap";
+import LiveMapLoader from "@/components/LiveMapLoader";
 import { coordFor } from "@/data/coords";
-import { googleRouteUrl } from "@/lib/maps";
+import { googleRouteUrl, googleSearchUrl as googleMapsUrl } from "@/lib/maps";
 
 export function generateStaticParams() {
   return states.map((s) => ({ id: s.id }));
@@ -28,6 +29,12 @@ export default function StatePage({ params }: { params: { id: string } }) {
   const list = destinationsInState(state.id);
   const placed = list.filter((d) => coordFor(d.slug)).length;
   const routeUrl = googleRouteUrl(list.slice(0, 11));
+  const pins = list
+    .map((d) => {
+      const c = coordFor(d.slug);
+      return c ? { lat: c.lat, lng: c.lng, label: d.name, href: `/destinations/${d.slug}` } : null;
+    })
+    .filter((p): p is NonNullable<typeof p> => p !== null);
   const totalDays = list.reduce((sum, d) => sum + d.idealDays, 0);
 
   return (
@@ -87,23 +94,29 @@ export default function StatePage({ params }: { params: { id: string } }) {
               )}
             </div>
 
-            <div className="mx-auto w-full max-w-sm lg:col-span-1">
-              {/* The real outline of this state, with every destination in it
-                  pinned where it actually is. */}
-              <StateOutline
+            <div className="mx-auto w-full max-w-md lg:col-span-1">
+              {/* The accurate map: street tiles under the real boundary, with
+                  every destination pinned where it actually is. The drawn
+                  outline stands in until the tiles arrive. */}
+              <LiveMapLoader
                 stateId={state.id}
-                pins={list
-                  .map((d) => {
-                    const c = coordFor(d.slug);
-                    return c
-                      ? { lat: c.lat, lng: c.lng, label: d.name, href: `/destinations/${d.slug}` }
-                      : null;
-                  })
-                  .filter((p): p is NonNullable<typeof p> => p !== null)}
+                pins={pins}
+                className="h-[380px] w-full sm:h-[440px]"
+                fallback={<StateOutline stateId={state.id} pins={pins} className="w-full" />}
               />
               <p className="mt-1 text-center text-xs text-navy-400">
                 {placed} of {list.length} destinations pinned · {state.capital} is the travel hub
               </p>
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
+                <a
+                  href={googleMapsUrl({ name: state.name })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg border border-navy-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy-700 hover:border-coral-300"
+                >
+                  📍 {state.name} in Google Maps ↗
+                </a>
+              </div>
             </div>
           </div>
         </div>

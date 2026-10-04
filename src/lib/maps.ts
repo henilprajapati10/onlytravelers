@@ -52,6 +52,11 @@ export function googleMapsPinUrl(destination: Destination): string | null {
   return `${MAPS_BASE}/search/?api=1&query=${c.lat},${c.lng}`;
 }
 
+/** A Google Maps search for any named thing in India — a state, a town. */
+export function googleSearchUrl(target: { name: string }): string {
+  return `${MAPS_BASE}/search/?api=1&query=${encodeURIComponent(`${target.name}, India`)}`;
+}
+
 /** Directions from wherever the traveller is now. */
 export function googleDirectionsUrl(destination: Destination): string {
   const c = coordFor(destination.slug);

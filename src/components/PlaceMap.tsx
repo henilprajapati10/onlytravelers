@@ -9,6 +9,7 @@ import {
   mapsApiKey,
 } from "@/lib/maps";
 import { StateOutline } from "./IndiaMap";
+import LiveMapLoader from "./LiveMapLoader";
 
 /**
  * Where this place is, and how to get to it.
@@ -41,12 +42,21 @@ export default function PlaceMap({ destination }: { destination: Destination }) 
           allowFullScreen
         />
       ) : (
-        <StateOutline
+        // No key: the accurate map is still the accurate map — street tiles
+        // under the state boundary, centred on the exact coordinate.
+        <LiveMapLoader
           stateId={destination.stateId}
-          pins={
-            coord
-              ? [{ lat: coord.lat, lng: coord.lng, label: destination.name }]
-              : []
+          pins={coord ? [{ lat: coord.lat, lng: coord.lng, label: destination.name }] : []}
+          center={coord ?? undefined}
+          zoom={12}
+          ariaLabel={`Map of ${destination.name}`}
+          className="aspect-square w-full"
+          fallback={
+            <StateOutline
+              stateId={destination.stateId}
+              pins={coord ? [{ lat: coord.lat, lng: coord.lng, label: destination.name }] : []}
+              className="w-full"
+            />
           }
         />
       )}
