@@ -94,6 +94,20 @@ const ACTIONS: { id: string; title: string; subtitle: string; href: string; keyw
     keywords: "circuits routes ready made packages itineraries",
   },
   {
+    id: "gems",
+    title: "Hidden gems",
+    subtitle: "Everything in the catalogue that is off the usual route",
+    href: "/destinations?gems=1",
+    keywords: "hidden gem gems offbeat off beat secret quiet unknown undiscovered lesser known",
+  },
+  {
+    id: "map",
+    title: "India by state, on the map",
+    subtitle: "Real boundaries — tap the state you are thinking about",
+    href: "/states",
+    keywords: "map india states boundaries atlas where",
+  },
+  {
     id: "festivals",
     title: "India's festival calendar",
     subtitle: "What is on, month by month, across all 36 states",
@@ -240,9 +254,21 @@ export function search(query: string, limit = 12): SearchResult[] {
     }
   }
 
-  return out
-    .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title))
-    .slice(0, limit);
+  const ranked = out.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+
+  /*
+   * Destinations outnumber everything else by two orders of magnitude, so on
+   * a word like "beach" they fill the list and push the theme, the state and
+   * the circuit off the bottom — which is usually the row the person wanted.
+   * Reserve a few slots for the other kinds rather than reweighting: the
+   * scores are right, it is the shape of the list that is wrong.
+   */
+  const others = ranked.filter((r) => r.kind !== "destination");
+  const reserved = Math.min(others.length, Math.floor(limit / 3));
+  const places = ranked.filter((r) => r.kind === "destination").slice(0, limit - reserved);
+  const keep = new Set([...places, ...others.slice(0, reserved)]);
+
+  return ranked.filter((r) => keep.has(r)).slice(0, limit);
 }
 
 /** Shown before anyone types — the things people actually come here for. */
@@ -253,4 +279,5 @@ export const SEARCH_SUGGESTIONS = [
   "beaches",
   "Northeast",
   "trekking",
+  "hidden gems",
 ];

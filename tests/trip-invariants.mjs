@@ -1,51 +1,11 @@
 /* Loads the app's real modules and probes the trip builder for broken invariants. */
-import fs from "node:fs";
-import path from "node:path";
-import { createRequire } from "node:module";
+import { loadModule } from "../scripts/ts-modules.mjs";
 
-const root = process.cwd();
-const require = createRequire(root + "/package.json");
-const { transform } = require("sucrase");
 
-const MODULES = [
-  "src/data/states.ts", "src/data/destinations.ts",
-  "src/data/guides/north.ts", "src/data/guides/west.ts", "src/data/guides/south.ts",
-  "src/data/guides/east.ts", "src/data/guides/central.ts", "src/data/guides/northeast.ts",
-  "src/data/guides/index.ts", "src/lib/format.ts", "src/lib/scene.ts", "src/lib/trip.ts",
-];
-const id = (f) => {
-  let i = "@/" + f.replace(/^src\//, "").replace(/\.tsx?$/, "");
-  return i.endsWith("/index") ? i.slice(0, -6) : i;
-};
-const factories = {}, cache = {};
-for (const file of MODULES) {
-  const { code } = transform(fs.readFileSync(path.join(root, file), "utf8"), {
-    transforms: ["typescript", "imports"], filePath: file,
-  });
-  const fixed = code.replace(/require\((['"])([^'"]+)\1\)/g, (m, q, spec) => {
-    if (spec.startsWith("@/")) return `__req(${q}${spec}${q})`;
-    if (spec.startsWith(".")) {
-      const abs = path.normalize(path.join(path.dirname(file), spec));
-      let x = "@/" + abs.replace(/^src\//, "");
-      if (x.endsWith("/index")) x = x.slice(0, -6);
-      return `__req(${q}${x}${q})`;
-    }
-    return m;
-  });
-  factories[id(file)] = new Function("exports", "module", "__req", fixed);
-}
-function __req(name) {
-  if (cache[name]) return cache[name].exports;
-  const m = { exports: {} };
-  cache[name] = m;
-  factories[name](m.exports, m, __req);
-  return m.exports;
-}
-
-const D = __req("@/data/destinations");
-const S = __req("@/data/states");
-const T = __req("@/lib/trip");
-const F = __req("@/lib/format");
+const D = loadModule("src/data/destinations.ts");
+const S = loadModule("src/data/states.ts");
+const T = loadModule("src/lib/trip.ts");
+const F = loadModule("src/lib/format.ts");
 
 const problems = [];
 const note = (tag, msg) => problems.push(`[${tag}] ${msg}`);
@@ -115,12 +75,12 @@ for (const d of D.destinations) {
 }
 console.log(`solo-trip failures: ${solo}/${D.destinations.length}`);
 
-/* ---- 8. big bag: all 359 ---- */
+/* ---- 8. big bag: the whole catalogue ---- */
 try {
   const all = T.buildTrip(D.destinations);
-  console.log(`all 359: ${all.totalDays} days, ${all.approxKm.toLocaleString()} km, warnings=${all.warnings.length}`);
+  console.log(`all ${D.destinations.length}: ${all.totalDays} days, ${all.approxKm.toLocaleString()} km, warnings=${all.warnings.length}`);
   if (all.stops.length !== D.destinations.length) note("BIG", `dropped stops: ${D.destinations.length - all.stops.length}`);
-} catch (e) { note("BIG", `all-359 trip threw: ${e.message}`); }
+} catch (e) { note("BIG", `whole-catalogue trip threw: ${e.message}`); }
 
 /* ---- 9. route sanity: does sequencing zigzag between states? ---- */
 const mixed = pick("taj-mahal-agra","hampi-unesco","varanasi-ghats-kashi-vishwanath","mysuru-palace-chamundi-hill","agra-fort","gokarna");

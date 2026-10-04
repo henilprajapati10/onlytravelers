@@ -13,6 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { runInThisContext } from "node:vm";
+import { loadModule } from "./ts-modules.mjs";
 
 const root = process.cwd();
 const require = createRequire(root + "/package.json");
@@ -34,22 +35,8 @@ const ID_MAP = JSON.parse(
     .replace(/,(\s*\})/g, "$1")
 );
 
-function load(file) {
-  const { code } = transform(fs.readFileSync(path.join(root, file), "utf8"), {
-    transforms: ["typescript", "imports"],
-    filePath: file,
-  });
-  const m = { exports: {} };
-  new Function("exports", "module", "__req", code.replace(/require\((['"])([^'"]+)\1\)/g, "(void 0)"))(
-    m.exports,
-    m,
-    () => ({})
-  );
-  return m.exports;
-}
-
-const { destinations } = load("src/data/destinations.ts");
-const { coords, DATASET_GAPS: GAP_LIST } = load("src/data/coords.ts");
+const { destinations } = loadModule("src/data/destinations.ts");
+const { coords, DATASET_GAPS: GAP_LIST } = loadModule("src/data/coords.ts");
 
 /** Ray casting on a single ring. */
 function inRing(lon, lat, ring) {

@@ -217,6 +217,7 @@ for s, st in zip(DIR['states'], states_out):
             'idealDays': float(d['days']),
             'bestMonthsLabel': d['months'],
             'bestMonths': months,
+            'source': 'directory',
             'permitRequired': permit or None,
             'monsoonProduct': (d['name'].split(' ')[0] in {m.split(' ')[0] for m in MONSOON_PRODUCTS}
                                and any(m.split(' ')[0] in d['name'] for m in MONSOON_PRODUCTS)) or None,
@@ -285,6 +286,7 @@ export function getState(id: string): StateUnit | undefined {
 '''
 
 dests_ts = header + '''import type { Zone } from "./states";
+import { addedDestinations } from "./additions";
 
 export type Theme =
 ''' + '\n'.join('  | "%s"' % t for t in CANON_ORDER) + ''';
@@ -303,6 +305,14 @@ export interface Destination {
   idealDays: number;
   bestMonthsLabel: string;
   bestMonths: number[];
+  /**
+   * Where the entry came from. "directory" is the 359 rows of the source
+   * document; "onlytravelers" is everything we added ourselves. Keeping the
+   * two distinguishable is the whole reason this field exists.
+   */
+  source: "directory" | "onlytravelers";
+  /** Deliberately off the usual route. Only ever set on our own additions. */
+  hiddenGem?: boolean;
   permitRequired?: boolean;
   /** A deliberate monsoon-season product — best in Jun-Sep. */
   monsoonProduct?: boolean;
@@ -311,7 +321,14 @@ export interface Destination {
 
 export const themes: Theme[] = ''' + ts(CANON_ORDER) + ''';
 
-export const destinations: Destination[] = ''' + ts(dests_out) + ''';
+/** The directory's own rows, exactly as the source document has them. */
+export const directoryDestinations: Destination[] = ''' + ts(dests_out) + ''';
+
+/**
+ * The catalogue the app uses: the directory, plus the places we added.
+ * `source` on each entry says which is which.
+ */
+export const destinations: Destination[] = [...directoryDestinations, ...addedDestinations];
 
 export function getDestination(slug: string): Destination | undefined {
   return destinations.find((d) => d.slug === slug);

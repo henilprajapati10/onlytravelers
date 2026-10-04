@@ -21,11 +21,23 @@ const MAPS_BASE = "https://www.google.com/maps";
 /** The search string Google resolves most reliably for an Indian place. */
 export function mapQuery(destination: Destination): string {
   const state = getState(destination.stateId);
-  // The district disambiguates the many repeated place names in India;
-  // "India" keeps the geocoder from wandering to a namesake abroad.
-  return [destination.name, destination.district, state?.name ?? destination.stateName, "India"]
-    .filter(Boolean)
-    .join(", ");
+
+  // Plenty of catalogue names already carry their district or state — "Taj
+  // Mahal, Agra", "Golden Temple, Amritsar". Repeating it gives Google
+  // "Taj Mahal, Agra, Agra, Uttar Pradesh", which geocodes worse, not better.
+  // The match is on whole words, so "Gateway of India" does not swallow the
+  // country and Agra does not match Agrasen.
+  const has = (haystack: string, needle: string) =>
+    new RegExp(`\\b${needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(haystack);
+
+  const parts = [destination.name];
+  for (const part of [destination.district, state?.name ?? destination.stateName]) {
+    if (part && !has(parts.join(", "), part)) parts.push(part);
+  }
+  // "India" is always last, whatever the name happens to contain: it is what
+  // keeps the geocoder from wandering to a namesake abroad.
+  parts.push("India");
+  return parts.join(", ");
 }
 
 /** Opens the place's card in Google Maps. */

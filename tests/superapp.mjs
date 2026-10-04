@@ -406,6 +406,48 @@ await m.waitForURL("**/destinations/pangong-tso", { timeout: 10000 });
 ok("search result navigates", m.url().endsWith("/destinations/pangong-tso"));
 await m.close();
 
+/* ---------- the expanded catalogue, the map and the hidden-gem tier ---------- */
+await page.goto(B + "/", { waitUntil: "networkidle" });
+const gemRow = page.locator("section:has(h2:has-text('Hidden gems')) article");
+ok("home shows a row of hidden gems", (await gemRow.count()) === 6);
+ok("every one of them is actually badged as one", (await gemRow.filter({ hasText: "Hidden gem" }).count()) === 6);
+await page.goto(B + "/destinations", { waitUntil: "networkidle" });
+await page.waitForTimeout(400);
+const countText = await page.locator("text=/Showing \\d+ of \\d+ destinations/").first().innerText();
+ok("the explorer counts the whole catalogue", /of 5\d\d destinations/.test(countText), countText);
+await page.locator("#filter-gems").click();
+await page.waitForTimeout(400);
+const gemText = await page.locator("text=/Showing \\d+ of \\d+ destinations/").first().innerText();
+ok("hidden gems only narrows the list", /of 1\d\d destinations/.test(gemText), gemText);
+ok("every card shown is badged", (await page.locator("article").count()) ===
+   (await page.locator("article:has-text('Hidden gem')").count()));
+await page.goto(B + "/destinations?gems=1", { waitUntil: "networkidle" });
+await page.waitForTimeout(400);
+ok("the gems filter is reachable by URL", await page.locator("#filter-gems[aria-pressed='true']").count() === 1);
+
+await page.goto(B + "/destinations/shekhawati-mandawa-nawalgarh", { waitUntil: "networkidle" });
+ok("an added destination renders its guide", (await page.locator("text=Travel by bicycle, text=bicycle").count()) > 0 ||
+   (await page.locator("text=havelis").count()) > 0);
+ok("an added destination has a map with its pin", (await page.locator("figure svg circle").count()) >= 1);
+ok("and the attribution under it", (await page.locator("figcaption:has-text('amCharts')").count()) >= 1);
+ok("the Google Maps link names the place and the country", (await page.locator("a[href*='google.com/maps/search']").first().getAttribute("href")).includes("India"));
+
+await page.goto(B + "/states", { waitUntil: "networkidle" });
+ok("the states page draws the whole country", (await page.locator("figure svg path").count()) >= 36);
+await page.locator("figure svg a[aria-label='Kerala']").click();
+await page.waitForURL("**/states/kerala", { timeout: 10000 });
+ok("clicking a state on the map opens it", page.url().endsWith("/states/kerala"));
+ok("the state page pins its destinations", (await page.locator("figure svg a circle").count()) >= 10);
+ok("and offers the route in Google Maps", (await page.locator("a[href*='google.com/maps/dir']").count()) >= 1);
+
+await page.goto(B + "/states/lakshadweep", { waitUntil: "networkidle" });
+ok("an island territory gets a locator inset", (await page.locator("figure svg").count()) >= 2);
+
+await page.goto(B + "/map-data", { waitUntil: "networkidle" });
+ok("the map register names its source and licence", (await page.locator("text=amCharts").count()) > 0 &&
+   (await page.locator("text=linkware").count()) > 0);
+ok("and admits what the dataset is missing", (await page.locator("text=Lakshadweep").count()) > 0);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 console.log("errors:", errs.length ? errs.join("\n") : "none");
 await browser.close();

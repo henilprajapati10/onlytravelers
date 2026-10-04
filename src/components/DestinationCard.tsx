@@ -24,6 +24,13 @@ export default function DestinationCard({ destination }: { destination: Destinat
             Permit
           </span>
         )}
+        {/* The quiet tier the campaign is about. Bottom-left, so it never
+            collides with the permit flag on a place that is both. */}
+        {destination.hiddenGem && (
+          <span className="absolute bottom-3 left-3 rounded-full bg-navy-800/90 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+            ◆ Hidden gem
+          </span>
+        )}
       </Link>
 
       <div className="flex flex-1 flex-col gap-2 p-4">

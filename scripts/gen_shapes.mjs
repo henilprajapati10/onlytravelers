@@ -91,7 +91,10 @@ for (const f of geo.features) {
 const spanX = (maxLon - minLon) * LON_SCALE;
 const spanY = maxLat - minLat;
 const SCALE = WIDTH / spanX;
-const HEIGHT = Math.round(spanY * SCALE);
+// Ceil, not round: path coordinates are rounded to one decimal place, so a
+// rounded-down height leaves the southernmost point of the Nicobars a
+// fraction outside the frame it is supposed to live in.
+const HEIGHT = Math.ceil(spanY * SCALE);
 
 const px = (lon) => ((lon - minLon) * LON_SCALE * SCALE);
 const py = (lat) => ((maxLat - lat) * SCALE);

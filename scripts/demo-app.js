@@ -181,6 +181,7 @@
         ${scene(d.slug, d.themes, 360, 240, "h-full")}
         <span class="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-navy-800">${esc(d.stateName)}</span>
         ${d.permitRequired ? '<span class="absolute right-3 top-3 rounded-full bg-accent px-2 py-1 text-[10px] font-bold uppercase">Permit</span>' : ""}
+        ${d.hiddenGem ? '<span class="absolute bottom-3 left-3 rounded-full bg-navy-800/90 px-2 py-1 text-[10px] font-bold uppercase text-white">\u25c6 Hidden gem</span>' : ""}
       </a>
       <div class="flex flex-1 flex-col gap-2 p-4">
         <div class="flex flex-wrap gap-1.5">
@@ -351,7 +352,7 @@
   }
 
   /* ---------- destinations explorer ---------- */
-  const filters = { q: "", zone: "All", state: "All", theme: "All", month: 0, days: 0, visible: 24 };
+  const filters = { q: "", zone: "All", state: "All", theme: "All", month: 0, days: 0, gems: false, visible: 24 };
 
   function filtered() {
     const q = filters.q.trim().toLowerCase();
@@ -359,6 +360,7 @@
       if (filters.zone !== "All" && d.zone !== filters.zone) return false;
       if (filters.state !== "All" && d.stateId !== filters.state) return false;
       if (filters.theme !== "All" && !d.themes.includes(filters.theme)) return false;
+      if (filters.gems && !d.hiddenGem) return false;
       if (filters.month && !d.bestMonths.includes(filters.month)) return false;
       if (filters.days && d.idealDays > filters.days) return false;
       if (q) {
@@ -395,13 +397,14 @@
     return `
     <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <h1 class="font-display text-3xl font-bold txt">All destinations</h1>
-      <p class="mt-2 max-w-2xl txt-muted">${destinations.length} places across all 36 states and union territories. Filter by where you are going, what you like, when you can travel, or how much time you have.</p>
+      <p class="mt-2 max-w-2xl txt-muted">${destinations.length} places across all 36 states and union territories, of which ${destinations.filter((d) => d.hiddenGem).length} are deliberately off the usual route. Filter by where you are going, what you like, when you can travel, or how much time you have.</p>
       <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <input id="f-q" type="text" value="${esc(filters.q)}" placeholder="Search a place, district or state…" class="rounded-lg border bd px-4 py-2.5 text-sm txt lg:col-span-3"/>
         <select id="f-zone" class="${sel}"><option value="All">All zones</option>${zones.map((z) => `<option value="${z}"${filters.zone === z ? " selected" : ""}>${z}</option>`).join("")}</select>
         <select id="f-state" class="${sel}"><option value="All">All states &amp; UTs</option>${stateOpts.map((s) => `<option value="${s.id}"${filters.state === s.id ? " selected" : ""}>${esc(s.name)}</option>`).join("")}</select>
         <select id="f-theme" class="${sel}"><option value="All">All themes</option>${themes.map((t) => `<option value="${t}"${filters.theme === t ? " selected" : ""}>${t}</option>`).join("")}</select>
         <select id="f-month" class="${sel}"><option value="0">Any month</option>${Array.from({ length: 12 }, (_, i) => i + 1).map((m) => `<option value="${m}"${filters.month === m ? " selected" : ""}>Good in ${monthName(m)}</option>`).join("")}</select>
+        <button type="button" id="f-gems" aria-pressed="${filters.gems}" class="rounded-lg px-3 py-2.5 text-sm font-semibold ${filters.gems ? "bg-navy-800 text-white" : "border bd surface txt"}">\u25c6 Hidden gems only</button>
         <select id="f-days" class="${sel}">${[[0, "Any length"], [0.5, "Half a day"], [1, "Up to 1 day"], [2, "Up to 2 days"], [3, "Up to 3 days"], [5, "Up to 5 days"]].map(([v, l]) => `<option value="${v}"${filters.days === v ? " selected" : ""}>${l}</option>`).join("")}</select>
         <button type="button" data-clear-filters class="rounded-lg border bd px-3 py-2.5 text-sm font-semibold accent">Clear filters</button>
       </div>
@@ -1755,6 +1758,12 @@
   });
 
   document.addEventListener("click", (e) => {
+    if (e.target.closest("#f-gems")) {
+      filters.gems = !filters.gems;
+      filters.visible = 24;
+      render(false);
+      return;
+    }
     /* ---------- trip starter ---------- */
     const sd = e.target.closest("[data-start-days]");
     if (sd) { starter.days = Number(sd.dataset.startDays); render(false); return; }

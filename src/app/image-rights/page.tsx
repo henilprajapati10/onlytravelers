@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { imageRightsRegister } from "@/data/images";
+import { destinations } from "@/data/destinations";
 
 export const metadata = {
   title: "Image rights register — OnlyTravelers",
@@ -37,7 +38,7 @@ export default function ImageRightsPage() {
           <div className="text-xs uppercase tracking-wide text-navy-400">missing a licence</div>
         </div>
         <div className="rounded-xl border border-navy-100 bg-white p-4">
-          <div className="font-display text-2xl font-bold text-navy-800">359</div>
+          <div className="font-display text-2xl font-bold text-navy-800">{destinations.length}</div>
           <div className="text-xs uppercase tracking-wide text-navy-400">slots ready</div>
         </div>
       </div>

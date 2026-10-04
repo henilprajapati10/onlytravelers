@@ -4,6 +4,7 @@ import { southGuides } from "./south";
 import { eastGuides } from "./east";
 import { centralGuides } from "./central";
 import { northeastGuides } from "./northeast";
+import { addedGuides } from "../additions";
 
 export interface Guide {
   /** What the place is and why it is worth the time. */
@@ -21,6 +22,8 @@ export const guides: Record<string, Guide> = {
   ...eastGuides,
   ...centralGuides,
   ...northeastGuides,
+  // Places the directory did not carry; see src/data/additions.
+  ...addedGuides,
 };
 
 export function getGuide(slug: string): Guide | undefined {

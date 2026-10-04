@@ -1,3 +1,4 @@
+import { destinations } from "@/data/destinations";
 import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
@@ -5,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "OnlyTravelers — Before life gets too busy, travel.",
     short_name: "OnlyTravelers",
     description:
-      "Plan and carry your India trips: 359 destinations, itineraries with real travel time, prep lists, bookings and spend — offline when you need it.",
+      `Plan and carry your India trips: ${destinations.length} destinations, itineraries with real travel time, prep lists, bookings and spend — offline when you need it.`,
     start_url: "/",
     display: "standalone",
     orientation: "portrait",

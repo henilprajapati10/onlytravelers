@@ -5,6 +5,18 @@ import DestinationCard from "@/components/DestinationCard";
 import HomeHero from "@/components/HomeHero";
 import { themeEmoji } from "@/lib/format";
 
+/* Six quiet ones, fixed rather than random so the page is the same for
+   everyone and cacheable. One theme each and spread across zones, so the
+   row reads as a range rather than six of the same thing. */
+const GEMS = [
+  "lonar-crater",
+  "tharangambadi-tranquebar",
+  "jawai-leopard-hills",
+  "valiyaparamba-backwaters",
+  "longwa-village",
+  "tso-kar",
+];
+
 const FEATURED = [
   "taj-mahal-agra",
   "alleppey-backwaters",
@@ -15,9 +27,14 @@ const FEATURED = [
 ];
 
 export default function HomePage() {
-  const featured = FEATURED.map((slug) => destinations.find((d) => d.slug === slug)).filter(
-    (d): d is (typeof destinations)[number] => Boolean(d)
-  );
+  const pick = (slugs: string[]) =>
+    slugs
+      .map((slug) => destinations.find((d) => d.slug === slug))
+      .filter((d): d is (typeof destinations)[number] => Boolean(d));
+
+  const featured = pick(FEATURED);
+  const gems = pick(GEMS);
+  const gemCount = destinations.filter((d) => d.hiddenGem).length;
 
   return (
     <div>
@@ -39,6 +56,34 @@ export default function HomePage() {
           {featured.map((destination) => (
             <DestinationCard key={destination.slug} destination={destination} />
           ))}
+        </div>
+      </section>
+
+      <section className="bg-navy-800 py-14 text-white">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="font-display text-2xl font-semibold">
+                ◆ Hidden gems
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm text-navy-200">
+                {gemCount} places in the catalogue are marked as off the usual route — not
+                lesser, just quieter. This is the half of India that the same twelve
+                photographs never show.
+              </p>
+            </div>
+            <Link
+              href="/destinations?gems=1"
+              className="shrink-0 rounded-lg bg-coral-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-coral-600"
+            >
+              See all {gemCount} →
+            </Link>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {gems.map((destination) => (
+              <DestinationCard key={destination.slug} destination={destination} />
+            ))}
+          </div>
         </div>
       </section>
 
@@ -76,7 +121,8 @@ export default function HomePage() {
           India, state by state
         </h2>
         <p className="mb-6 text-sm text-navy-500">
-          Six zones, 36 states and union territories. Every one of them is covered.
+          Six zones, 36 states and union territories. Every one of them is covered — tap a
+          state on the map, or start from a zone.
         </p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {zones.map((zone) => {

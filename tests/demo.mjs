@@ -192,6 +192,22 @@ ok("it is filed under the law", (await page.locator("text=The law").count()) > 0
 ok("the coral rule appears", (await page.locator("text=/coral/i").count()) > 0);
 await page.evaluate(() => localStorage.clear());
 
+/* ---------- the expanded catalogue and the hidden-gem tier ---------- */
+await go("#/destinations");
+await page.waitForTimeout(400);
+const totalText = await page.locator("#dest-count").innerText();
+ok("the explorer counts the whole catalogue", /of 5\d\d destinations/.test(totalText), totalText);
+await page.locator("#f-gems").click();
+await page.waitForTimeout(400);
+const gemsText = await page.locator("#dest-count").innerText();
+ok("the hidden-gems toggle narrows the list", /of 1\d\d destinations/.test(gemsText), gemsText);
+ok("every visible card is badged as a hidden gem", (await page.locator("#dest-grid article").count()) ===
+   (await page.locator("#dest-grid article:has-text('Hidden gem')").count()));
+await go("#/destinations/shekhawati-mandawa-nawalgarh");
+await page.waitForTimeout(300);
+ok("an added destination has a full page", (await page.locator("text=painted").count()) > 0);
+ok("an added destination can be bagged", (await page.locator("button:has-text('Add to Trip Bag')").count()) > 0);
+
 /* ---------- no price anywhere ---------- */
 let priced = [];
 for (const h of ["#/", "#/start", "#/destinations", "#/circuits", "#/festivals", "#/states/kerala", "#/destinations/alleppey-backwaters"]) {

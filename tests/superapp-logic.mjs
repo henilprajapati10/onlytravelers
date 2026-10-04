@@ -4,68 +4,27 @@
  *
  *   node tests/superapp-logic.mjs
  */
-import fs from "node:fs";
-import path from "node:path";
-import { createRequire } from "node:module";
+import { loadModule } from "../scripts/ts-modules.mjs";
 
-const root = process.cwd();
-const require = createRequire(root + "/package.json");
-const { transform } = require("sucrase");
 
-const MODULES = [
-  "src/data/states.ts", "src/data/destinations.ts",
-  "src/data/guides/north.ts", "src/data/guides/west.ts", "src/data/guides/south.ts",
-  "src/data/guides/east.ts", "src/data/guides/central.ts", "src/data/guides/northeast.ts",
-  "src/data/guides/index.ts", "src/data/circuits.ts", "src/data/renown.ts",
-  "src/data/essentials.ts", "src/data/trips.ts", "src/data/festivals.ts",
-  "src/lib/format.ts", "src/lib/scene.ts", "src/lib/trip.ts",
-  "src/lib/starter.ts", "src/lib/today.ts", "src/lib/search.ts",
-  "src/lib/alternatives.ts", "src/lib/responsible.ts", "src/lib/dayshape.ts",
-  "src/lib/storage.ts", "src/lib/wallet.ts", "src/lib/export.ts",
-];
-
-const id = (f) => {
-  let i = "@/" + f.replace(/^src\//, "").replace(/\.tsx?$/, "");
-  return i.endsWith("/index") ? i.slice(0, -6) : i;
-};
-const factories = {}, cache = {};
-for (const file of MODULES) {
-  const { code } = transform(fs.readFileSync(path.join(root, file), "utf8"), {
-    transforms: ["typescript", "imports"], filePath: file,
-  });
-  const fixed = code.replace(/require\((['"])([^'"]+)\1\)/g, (m, q, spec) => {
-    if (spec.startsWith("@/")) return `__req(${q}${spec}${q})`;
-    if (spec.startsWith(".")) {
-      const abs = path.normalize(path.join(path.dirname(file), spec));
-      let x = "@/" + abs.replace(/^src\//, "");
-      if (x.endsWith("/index")) x = x.slice(0, -6);
-      return `__req(${q}${x}${q})`;
-    }
-    return m;
-  });
-  factories[id(file)] = new Function("exports", "module", "__req", fixed);
-}
-function __req(name) {
-  if (cache[name]) return cache[name].exports;
-  const m = { exports: {} };
-  cache[name] = m;
-  factories[name](m.exports, m, __req);
-  return m.exports;
-}
-
-const D = __req("@/data/destinations");
-const S = __req("@/data/states");
-const E = __req("@/data/essentials");
-const R = __req("@/data/renown");
-const T = __req("@/lib/trip");
-const St = __req("@/lib/starter");
-const Td = __req("@/lib/today");
-const Se = __req("@/lib/search");
-const Ex = __req("@/lib/export");
-const Fe = __req("@/data/festivals");
-const Al = __req("@/lib/alternatives");
-const Re = __req("@/lib/responsible");
-const Ds = __req("@/lib/dayshape");
+const D = loadModule("src/data/destinations.ts");
+const S = loadModule("src/data/states.ts");
+const E = loadModule("src/data/essentials.ts");
+const R = loadModule("src/data/renown.ts");
+const T = loadModule("src/lib/trip.ts");
+const St = loadModule("src/lib/starter.ts");
+const Td = loadModule("src/lib/today.ts");
+const Se = loadModule("src/lib/search.ts");
+const Ex = loadModule("src/lib/export.ts");
+const Fe = loadModule("src/data/festivals.ts");
+const Al = loadModule("src/lib/alternatives.ts");
+const Re = loadModule("src/lib/responsible.ts");
+const Ds = loadModule("src/lib/dayshape.ts");
+const G = loadModule("src/data/guides/index.ts");
+const Ad = loadModule("src/data/additions/index.ts");
+const Co = loadModule("src/data/coords.ts");
+const Sh = loadModule("src/data/shapes.ts");
+const Mp = loadModule("src/lib/maps.ts");
 
 let pass = 0, fail = 0;
 const ok = (label, cond, extra = "") => {
@@ -232,7 +191,7 @@ const costLike =
   /(₹|Rs\.?\s?|INR\s?|\$)\s?\d[\d,]*\s*(?!note\b)(per|each|onwards|entry|ticket|fee|pp\b|\/)|\b(costs?|price[ds]?|fare|entry fee|ticket price|charges?)\b[^.]{0,20}(₹|Rs\.?\s?\d|INR\s?\d|\$\d)/i;
 let priced = 0;
 for (const d of D.destinations) {
-  const g = __req("@/data/guides").guides[d.slug];
+  const g = loadModule("src/data/guides/index.ts").guides[d.slug];
   const blob = `${d.name} ${d.rawTheme} ${g?.summary ?? ""} ${(g?.highlights ?? []).join(" ")} ${g?.tip ?? ""}`;
   if (costLike.test(blob)) { priced++; console.log(`   priced: ${d.slug}`); }
 }
@@ -384,12 +343,12 @@ ok("no destination guide quotes a price", priced === 0, `${priced} found`);
 
   const taj = D.destinations.find((d) => d.slug === "taj-mahal-agra");
   ok("the day shape carries the guide's own advice",
-     Ds.shapeForDestination(taj, 11).localAdvice === __req("@/data/guides").guides["taj-mahal-agra"].tip);
+     Ds.shapeForDestination(taj, 11).localAdvice === loadModule("src/data/guides/index.ts").guides["taj-mahal-agra"].tip);
 
   // Most guide tips are not about timing at all ("bring a book", "hire the
   // official guide"), and forcing those into a slot would be the bug. What
   // matters is that advice which DOES name a time lands in the right part.
-  const guidesAll = __req("@/data/guides").guides;
+  const guidesAll = loadModule("src/data/guides/index.ts").guides;
   const clockish = /\b(dawn|sunrise|sunset|dusk|morning|evening|afternoon|midday|noon|overnight|after dark|first light|\d{1,2}\s?[ap]m)\b/i;
   const timed = D.destinations.filter((d) => clockish.test(guidesAll[d.slug]?.tip ?? ""));
   const misplaced = timed.filter((d) => !Ds.shapeForDestination(d, 11).adviceIn);
@@ -410,9 +369,127 @@ ok("no destination guide quotes a price", priced === 0, `${priced} found`);
      !D.destinations.some((d) => costLike.test(Ds.shapeForDestination(d, 11).slots.map((x) => x.what).join(" "))));
 }
 
+/* ---------- the expanded catalogue ---------- */
+{
+  const all = D.destinations;
+  const added = all.filter((d) => d.source === "onlytravelers");
+  const directory = all.filter((d) => d.source === "directory");
+
+  ok("the directory's 359 rows are all still here and unchanged in count",
+     directory.length === 359, `${directory.length}`);
+  ok("every entry declares where it came from",
+     all.every((d) => d.source === "directory" || d.source === "onlytravelers"));
+  ok("nothing from the directory is dressed up as a hidden gem",
+     !directory.some((d) => d.hiddenGem));
+  ok("the additions carry a hidden-gem tier",
+     added.filter((d) => d.hiddenGem).length > 50,
+     `${added.filter((d) => d.hiddenGem).length} of ${added.length}`);
+
+  ok("no duplicate slugs across the whole catalogue",
+     new Set(all.map((d) => d.slug)).size === all.length);
+  ok("no addition duplicates a directory place's name in the same state",
+     !added.some((a) =>
+       directory.some((d) => d.stateId === a.stateId && d.name.toLowerCase() === a.name.toLowerCase())));
+
+  ok("every destination has a guide", all.every((d) => G.guides[d.slug]),
+     all.filter((d) => !G.guides[d.slug]).map((d) => d.slug).join(", "));
+  ok("every guide has a summary, highlights and a tip",
+     all.every((d) => {
+       const g = G.guides[d.slug];
+       return g && g.summary.length > 40 && g.highlights.length >= 2 && g.tip.length > 20;
+     }));
+  ok("every addition names a real state",
+     added.every((d) => S.getState(d.stateId)));
+  ok("every addition's themes are real themes",
+     added.every((d) => d.themes.length > 0 && d.themes.every((t) => D.themes.includes(t))));
+  ok("every addition's best months match its label's month count",
+     added.every((d) => d.bestMonths.length > 0 && d.bestMonths.every((m) => m >= 1 && m <= 12)));
+  ok("the additions quote no price",
+     !Ad.additions.some((a) =>
+       costLike.test(`${a.guide.summary} ${a.guide.highlights.join(" ")} ${a.guide.tip}`)));
+  ok("every state and union territory gained or kept coverage",
+     S.states.every((st) => all.some((d) => d.stateId === st.id)));
+}
+
+/* ---------- maps: coordinates, shapes and the links out ---------- */
+{
+  const all = D.destinations;
+  const placed = all.filter((d) => Co.coordFor(d.slug));
+
+  ok("almost every destination can be pinned on a map",
+     placed.length / all.length > 0.95, `${placed.length}/${all.length}`);
+  ok("no coordinate is outside India's bounding box",
+     placed.every((d) => {
+       const c = Co.coordFor(d.slug);
+       return c.lat > 6 && c.lat < 38 && c.lng > 68 && c.lng < 98;
+     }));
+  // The directory lists Dzukou Valley twice, once under Manipur and once
+  // under Nagaland, because the valley straddles the border and both claim
+  // it. Two rows for one place may legitimately share a point; two different
+  // places sharing one is a copy-paste error.
+  ok("no two different places share an identical coordinate", (() => {
+    const seen = new Map();
+    for (const d of placed) {
+      const c = Co.coordFor(d.slug);
+      const key = `${c.lat},${c.lng}`;
+      const name = d.name.toLowerCase().replace(/[^a-z]/g, "");
+      const prev = seen.get(key);
+      if (prev && !prev.includes(name) && !name.includes(prev)) return false;
+      seen.set(key, name);
+    }
+    return true;
+  })());
+
+  ok("every state and union territory has a drawn outline",
+     S.states.every((st) => Sh.shapeFor(st.id)), `${Sh.stateShapes.length} shapes`);
+  ok("every outline's bounding box lies inside the shared viewBox",
+     Sh.stateShapes.every((sh) =>
+       sh.bbox[0] >= 0 && sh.bbox[1] >= 0 &&
+       sh.bbox[2] <= Sh.INDIA_VIEWBOX.width && sh.bbox[3] <= Sh.INDIA_VIEWBOX.height));
+  ok("a pin projects into its own state's bounding box",
+     (() => {
+       const d = D.destinations.find((x) => x.slug === "taj-mahal-agra");
+       const c = Co.coordFor(d.slug);
+       const p = Sh.projectToIndia(c.lng, c.lat);
+       const b = Sh.shapeFor("uttar-pradesh").bbox;
+       return p.x >= b[0] && p.x <= b[2] && p.y >= b[1] && p.y <= b[3];
+     })());
+
+  const taj = D.destinations.find((d) => d.slug === "taj-mahal-agra");
+  ok("a place query names the place, district, state and country",
+     Mp.mapQuery(taj) === "Taj Mahal, Agra, Uttar Pradesh, India", Mp.mapQuery(taj));
+  ok("a name that already carries its district does not repeat it",
+     !/Agra, Agra/.test(Mp.mapQuery(taj)));
+  ok("a name containing 'India' still gets the country appended",
+     Mp.mapQuery(D.destinations.find((d) => d.slug === "mumbai-gateway-of-india-marine-drive"))
+       .endsWith(", India"));
+  ok("every map query ends in India",
+     D.destinations.every((d) => Mp.mapQuery(d).endsWith(", India")));
+  ok("the map link is a real Google Maps search URL",
+     Mp.googleMapsUrl(taj).startsWith("https://www.google.com/maps/search/?api=1&query="));
+  ok("a pin link uses the coordinate when we have one",
+     Mp.googleMapsPinUrl(taj).includes(String(Co.coordFor(taj.slug).lat)));
+  ok("a route link keeps within Google's waypoint cap", (() => {
+     const stops = D.destinations.filter((d) => d.stateId === "rajasthan");
+     const url = Mp.googleRouteUrl(stops);
+     const wp = new URL(url).searchParams.get("waypoints");
+     return wp.split("|").length <= 9;
+  })());
+  ok("a long route is reported as truncated",
+     Mp.routeIsTruncated(D.destinations.filter((d) => d.stateId === "gujarat")));
+  ok("a two-stop route is not", !Mp.routeIsTruncated(D.destinations.slice(0, 2)));
+  ok("one stop is not a route", Mp.googleRouteUrl(D.destinations.slice(0, 1)) === null);
+  ok("the dataset-gap register only names places we actually carry",
+     Co.DATASET_GAPS.every((g) => D.destinations.some((d) => d.slug === g.slug)));
+}
+
 /* ---------- search reaches the new layer ---------- */
 ok("search finds a festival", Se.search("hornbill").some((r) => r.kind === "festival"));
 ok("search finds the festival calendar", Se.search("festival calendar").some((r) => r.kind === "action"));
+ok("search finds the hidden gems", Se.search("offbeat").some((r) => r.kind === "action" && r.id === "gems"));
+ok("search finds an added destination", Se.search("shekhawati").some((r) => r.id === "shekhawati-mandawa-nawalgarh"));
+ok("a theme is not buried under destinations that share its name",
+   Se.search("beach").some((r) => r.kind === "theme"));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

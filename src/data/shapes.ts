@@ -19,7 +19,7 @@ export interface StateShape {
   bbox: [number, number, number, number];
 }
 
-export const INDIA_VIEWBOX = { width: 1000, height: 1127 };
+export const INDIA_VIEWBOX = { width: 1000, height: 1128 };
 
 /** The geographic window the projection covers, for placing point markers. */
 export const INDIA_BOUNDS = {

@@ -197,10 +197,10 @@ export function StateOutline({
                 strokeWidth={unit * 0.7}
                 strokeDasharray={pin.approximate ? `${unit},${unit}` : undefined}
               />
-              <title>
-                {pin.label}
-                {pin.approximate ? " (approximate location)" : ""}
-              </title>
+              {/* One text node, deliberately: two adjacent children inside an
+                  SVG <title> serialise differently on the server and the
+                  client, and the page re-renders itself on load. */}
+              <title>{pin.approximate ? `${pin.label} (approximate location)` : pin.label}</title>
             </>
           );
           return pin.href ? (

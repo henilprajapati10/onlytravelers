@@ -14,12 +14,14 @@
  *    end of the country.
  */
 
+import { addedCoords } from "./additions";
+
 export interface Coord {
   lat: number;
   lng: number;
 }
 
-export const coords: Record<string, Coord> = {
+const directoryCoords: Record<string, Coord> = {
   /* ---------- Delhi ---------- */
   "red-fort": { lat: 28.6562, lng: 77.241 },
   "qutub-minar": { lat: 28.5245, lng: 77.1855 },
@@ -415,6 +417,13 @@ export const coords: Record<string, Coord> = {
   "zuluk-silk-route": { lat: 27.25, lng: 88.7667 },
   yuksom: { lat: 27.3667, lng: 88.2167 },
 };
+
+/**
+ * The directory's places and our own additions, in one lookup. Each addition
+ * carries its coordinate next to its guide, so a place added without knowing
+ * where it is simply has no entry here — which is the intended behaviour.
+ */
+export const coords: Record<string, Coord> = { ...directoryCoords, ...addedCoords };
 
 export function coordFor(slug: string): Coord | undefined {
   return coords[slug];

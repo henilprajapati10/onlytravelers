@@ -27,6 +27,7 @@ export default function DestinationsExplorer() {
     initialTheme && themes.includes(initialTheme as Theme) ? (initialTheme as Theme) : "All"
   );
   const [month, setMonth] = useState<number | 0>(0);
+  const [gemsOnly, setGemsOnly] = useState(params.get("gems") === "1");
   const [maxDays, setMaxDays] = useState<number | 0>(0);
   const [visible, setVisible] = useState(PAGE_SIZE);
 
@@ -40,6 +41,7 @@ export default function DestinationsExplorer() {
     if (t && themes.includes(t as Theme)) setTheme(t as Theme);
     if (z && zones.includes(z as Zone)) setZone(z as Zone);
     if (s && states.some((x) => x.id === s)) setStateId(s);
+    setGemsOnly(params.get("gems") === "1");
     setVisible(PAGE_SIZE);
   }, [params]);
 
@@ -49,6 +51,7 @@ export default function DestinationsExplorer() {
       if (zone !== "All" && d.zone !== zone) return false;
       if (stateId !== "All" && d.stateId !== stateId) return false;
       if (theme !== "All" && !d.themes.includes(theme)) return false;
+      if (gemsOnly && !d.hiddenGem) return false;
       if (month && !d.bestMonths.includes(month)) return false;
       if (maxDays && d.idealDays > maxDays) return false;
       if (q) {
@@ -58,7 +61,7 @@ export default function DestinationsExplorer() {
       }
       return true;
     });
-  }, [query, zone, stateId, theme, month, maxDays]);
+  }, [query, zone, stateId, theme, month, maxDays, gemsOnly]);
 
   const stateOptions = useMemo(
     () => states.filter((s) => zone === "All" || s.zone === zone),
@@ -66,7 +69,13 @@ export default function DestinationsExplorer() {
   );
 
   const hasFilters =
-    Boolean(query) || zone !== "All" || stateId !== "All" || theme !== "All" || month !== 0 || maxDays !== 0;
+    Boolean(query) ||
+    zone !== "All" ||
+    stateId !== "All" ||
+    theme !== "All" ||
+    month !== 0 ||
+    maxDays !== 0 ||
+    gemsOnly;
 
   const reset = () => {
     setQuery("");
@@ -75,6 +84,7 @@ export default function DestinationsExplorer() {
     setTheme("All");
     setMonth(0);
     setMaxDays(0);
+    setGemsOnly(false);
     setVisible(PAGE_SIZE);
   };
 
@@ -85,8 +95,10 @@ export default function DestinationsExplorer() {
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <h1 className="font-display text-3xl font-bold text-navy-800">All destinations</h1>
       <p className="mt-2 max-w-2xl text-navy-500">
-        {destinations.length} places across all 36 states and union territories. Filter by
-        where you are going, what you like, when you can travel, or how much time you have.
+        {destinations.length} places across all 36 states and union territories, of which{" "}
+        {destinations.filter((d) => d.hiddenGem).length} are deliberately off the usual route.
+        Filter by where you are going, what you like, when you can travel, or how much time
+        you have.
       </p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -187,6 +199,23 @@ export default function DestinationsExplorer() {
           <option value={3}>Up to 3 days</option>
           <option value={5}>Up to 5 days</option>
         </select>
+
+        <button
+          type="button"
+          id="filter-gems"
+          onClick={() => {
+            setGemsOnly((v) => !v);
+            setVisible(PAGE_SIZE);
+          }}
+          aria-pressed={gemsOnly}
+          className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
+            gemsOnly
+              ? "bg-navy-800 text-white"
+              : "border border-navy-200 bg-white text-navy-700 hover:border-coral-300"
+          }`}
+        >
+          ◆ Hidden gems only
+        </button>
 
         {hasFilters && (
           <button

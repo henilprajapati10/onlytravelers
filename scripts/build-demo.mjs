@@ -20,39 +20,73 @@ const { transform } = require("sucrase");
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outFile = process.argv[2] ?? path.join(root, "demo", "index.html");
 
-const MODULES = [
+/*
+ * The demo ships the app's own modules, so it cannot drift from the product.
+ * The list used to be written out by hand, which meant every new module was
+ * one forgotten line away from a demo that silently disagreed with the app.
+ * These are the entry points; everything they import is found from disk.
+ */
+const ENTRIES = [
   "src/data/states.ts",
   "src/data/destinations.ts",
-  "src/data/guides/north.ts",
-  "src/data/guides/west.ts",
-  "src/data/guides/south.ts",
-  "src/data/guides/east.ts",
-  "src/data/guides/central.ts",
-  "src/data/guides/northeast.ts",
   "src/data/guides/index.ts",
   "src/data/circuits.ts",
+  "src/data/trips.ts",
+  "src/data/profile.ts",
+  "src/data/operators.ts",
+  "src/data/renown.ts",
+  "src/data/essentials.ts",
+  "src/data/festivals.ts",
+  "src/data/coords.ts",
+  "src/data/shapes.ts",
   "src/lib/format.ts",
   "src/lib/scene.ts",
   "src/lib/trip.ts",
   "src/lib/suggest.ts",
   "src/lib/export.ts",
-  "src/data/trips.ts",
-  "src/data/profile.ts",
-  "src/data/operators.ts",
   "src/lib/prep.ts",
   "src/lib/bookings.ts",
-  "src/data/renown.ts",
-  "src/data/essentials.ts",
   "src/lib/starter.ts",
   "src/lib/today.ts",
   "src/lib/search.ts",
   "src/lib/storage.ts",
   "src/lib/wallet.ts",
-  "src/data/festivals.ts",
   "src/lib/alternatives.ts",
   "src/lib/responsible.ts",
   "src/lib/dayshape.ts",
+  "src/lib/maps.ts",
 ];
+
+/** Resolve an import the way the bundler would, relative to the repo root. */
+function resolveSpec(spec, fromFile) {
+  const base = spec.startsWith("@/")
+    ? path.join(root, "src", spec.slice(2))
+    : path.resolve(path.dirname(path.join(root, fromFile)), spec);
+  for (const c of [base, base + ".ts", base + ".tsx", path.join(base, "index.ts")]) {
+    if (fs.existsSync(c) && fs.statSync(c).isFile()) return path.relative(root, c);
+  }
+  return null;
+}
+
+/** Every module the entries reach, in dependency order is not needed — the
+ *  registry is lazy, so any order works. */
+const MODULES = (() => {
+  const seen = new Set();
+  const queue = [...ENTRIES];
+  while (queue.length) {
+    const file = queue.shift();
+    if (seen.has(file)) continue;
+    seen.add(file);
+    const src = fs.readFileSync(path.join(root, file), "utf8");
+    for (const m of src.matchAll(/from\s+["']([^"']+)["']/g)) {
+      const spec = m[1];
+      if (!spec.startsWith("@/") && !spec.startsWith(".")) continue;
+      const target = resolveSpec(spec, file);
+      if (target && !seen.has(target)) queue.push(target);
+    }
+  }
+  return [...seen];
+})();
 
 /** "src/data/guides/index.ts" -> canonical id "@/data/guides" */
 function moduleId(file) {
@@ -131,6 +165,9 @@ ${registry}
     alternatives: __req("@/lib/alternatives"),
     responsible: __req("@/lib/responsible"),
     dayshape: __req("@/lib/dayshape"),
+    coords: __req("@/data/coords"),
+    shapes: __req("@/data/shapes"),
+    maps: __req("@/lib/maps"),
   };
 })();
 `;
@@ -155,7 +192,15 @@ execFileSync(
 );
 const css = fs.readFileSync(cssFile, "utf8");
 
+// The shell's footer states the catalogue size. Counting it from the data
+// file that is being bundled means the demo can never claim the wrong number.
+const destCount = (fs.readFileSync(path.join(root, "src/data/destinations.ts"), "utf8").match(/^\s*slug: "/gm) || []).length
+  + (fs.readdirSync(path.join(root, "src/data/additions"))
+      .filter((f) => f.endsWith(".ts") && f !== "index.ts" && f !== "types.ts")
+      .reduce((n, f) => n + (fs.readFileSync(path.join(root, "src/data/additions", f), "utf8").match(/^\s*slug: "/gm) || []).length, 0));
+
 const html = shell
+  .replace("__DEST_COUNT__", () => String(destCount))
   .replace("/*__CSS__*/", () => css)
   .replace("//__RUNTIME__", () => runtime)
   .replace("//__APP__", () => ui);

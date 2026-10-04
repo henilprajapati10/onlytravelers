@@ -3,6 +3,7 @@
 // Regenerate with scripts/gen_data.py rather than editing by hand.
 
 import type { Zone } from "./states";
+import { addedDestinations } from "./additions";
 
 export type Theme =
   | "Heritage"
@@ -34,6 +35,14 @@ export interface Destination {
   idealDays: number;
   bestMonthsLabel: string;
   bestMonths: number[];
+  /**
+   * Where the entry came from. "directory" is the 359 rows of the source
+   * document; "onlytravelers" is everything we added ourselves. Keeping the
+   * two distinguishable is the whole reason this field exists.
+   */
+  source: "directory" | "onlytravelers";
+  /** Deliberately off the usual route. Only ever set on our own additions. */
+  hiddenGem?: boolean;
   permitRequired?: boolean;
   /** A deliberate monsoon-season product — best in Jun-Sep. */
   monsoonProduct?: boolean;
@@ -42,7 +51,8 @@ export interface Destination {
 
 export const themes: Theme[] = ["Heritage", "Spiritual", "Hills", "Nature", "Wildlife", "Beach", "Islands", "Lakes", "Cities", "Trekking", "Culture", "Food & Drink", "Desert", "Backwaters"];
 
-export const destinations: Destination[] = [
+/** The directory's own rows, exactly as the source document has them. */
+export const directoryDestinations: Destination[] = [
   {
     slug: "red-fort",
     name: "Red Fort",
@@ -54,7 +64,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "qutub-minar",
@@ -67,7 +78,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "humayuns-tomb",
@@ -80,7 +92,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "india-gate-kartavya-path",
@@ -93,7 +106,8 @@ export const destinations: Destination[] = [
     rawTheme: "Urban",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "jama-masjid-chandni-chowk",
@@ -106,7 +120,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage / Food",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "akshardham-temple",
@@ -119,7 +134,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "lotus-temple",
@@ -132,7 +148,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "hauz-khas-village",
@@ -145,7 +162,8 @@ export const destinations: Destination[] = [
     rawTheme: "Urban",
     idealDays: 0.5,
     bestMonthsLabel: "Year round",
-    bestMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "purana-qila",
@@ -158,7 +176,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "national-museum",
@@ -171,7 +190,8 @@ export const destinations: Destination[] = [
     rawTheme: "Museum",
     idealDays: 0.5,
     bestMonthsLabel: "Year round",
-    bestMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "taj-mahal-agra",
@@ -184,7 +204,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "agra-fort",
@@ -197,7 +218,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "fatehpur-sikri",
@@ -210,7 +232,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "varanasi-ghats-kashi-vishwanath",
@@ -223,7 +246,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "sarnath",
@@ -236,7 +260,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual / Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ayodhya",
@@ -249,7 +274,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "mathura-vrindavan",
@@ -262,7 +288,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "prayagraj-triveni-sangam",
@@ -275,7 +302,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Feb",
-    bestMonths: [1, 2, 10, 11, 12]
+    bestMonths: [1, 2, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "lucknow-bara-imambara-chowk",
@@ -288,7 +316,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage / Food",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "dudhwa-national-park",
@@ -301,7 +330,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 11, 12],
+    source: "directory"
   },
   {
     slug: "chitrakoot",
@@ -314,7 +344,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "jhansi-fort",
@@ -327,7 +358,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "rishikesh",
@@ -340,7 +372,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual / Adventure",
     idealDays: 2.0,
     bestMonthsLabel: "Sep - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "haridwar",
@@ -353,7 +386,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Sep - Apr",
-    bestMonths: [1, 2, 3, 4, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "mussoorie",
@@ -366,7 +400,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Mar - Jun, Sep - Nov",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "nainital",
@@ -379,7 +414,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills / Lake",
     idealDays: 2.0,
     bestMonthsLabel: "Mar - Jun, Sep - Nov",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "jim-corbett-national-park",
@@ -392,7 +428,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 11, 12],
+    source: "directory"
   },
   {
     slug: "kedarnath",
@@ -405,7 +442,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 2.0,
     bestMonthsLabel: "May - Oct",
-    bestMonths: [5, 6, 7, 8, 9, 10]
+    bestMonths: [5, 6, 7, 8, 9, 10],
+    source: "directory"
   },
   {
     slug: "badrinath",
@@ -418,7 +456,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 2.0,
     bestMonthsLabel: "May - Oct",
-    bestMonths: [5, 6, 7, 8, 9, 10]
+    bestMonths: [5, 6, 7, 8, 9, 10],
+    source: "directory"
   },
   {
     slug: "gangotri-yamunotri",
@@ -431,7 +470,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 3.0,
     bestMonthsLabel: "May - Oct",
-    bestMonths: [5, 6, 7, 8, 9, 10]
+    bestMonths: [5, 6, 7, 8, 9, 10],
+    source: "directory"
   },
   {
     slug: "auli",
@@ -444,7 +484,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills / Snow",
     idealDays: 2.0,
     bestMonthsLabel: "Dec - Mar",
-    bestMonths: [1, 2, 3, 12]
+    bestMonths: [1, 2, 3, 12],
+    source: "directory"
   },
   {
     slug: "valley-of-flowers",
@@ -457,7 +498,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature / Trek",
     idealDays: 3.0,
     bestMonthsLabel: "Jul - Sep",
-    bestMonths: [7, 8, 9]
+    bestMonths: [7, 8, 9],
+    source: "directory"
   },
   {
     slug: "chopta-tungnath",
@@ -470,7 +512,8 @@ export const destinations: Destination[] = [
     rawTheme: "Trek",
     idealDays: 2.0,
     bestMonthsLabel: "Apr - Jun, Sep - Nov",
-    bestMonths: [4, 5, 6, 9, 10, 11]
+    bestMonths: [4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "almora-kausani",
@@ -483,7 +526,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Mar - Jun, Sep - Nov",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "ranikhet",
@@ -496,7 +540,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Mar - Jun, Sep - Nov",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "shimla",
@@ -509,7 +554,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Mar - Jun, Dec - Jan",
-    bestMonths: [1, 3, 4, 5, 6, 12]
+    bestMonths: [1, 3, 4, 5, 6, 12],
+    source: "directory"
   },
   {
     slug: "manali-solang-valley",
@@ -522,7 +568,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills / Adventure",
     idealDays: 3.0,
     bestMonthsLabel: "Mar - Jun, Oct - Feb",
-    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "dharamshala-mcleod-ganj",
@@ -535,7 +582,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills / Spiritual",
     idealDays: 2.0,
     bestMonthsLabel: "Mar - Jun, Sep - Nov",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "spiti-valley-kaza-key-monastery",
@@ -548,7 +596,8 @@ export const destinations: Destination[] = [
     rawTheme: "High Altitude",
     idealDays: 5.0,
     bestMonthsLabel: "Jun - Sep",
-    bestMonths: [6, 7, 8, 9]
+    bestMonths: [6, 7, 8, 9],
+    source: "directory"
   },
   {
     slug: "kinnaur-kalpa-sangla-chitkul",
@@ -561,7 +610,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 4.0,
     bestMonthsLabel: "Apr - Oct",
-    bestMonths: [4, 5, 6, 7, 8, 9, 10]
+    bestMonths: [4, 5, 6, 7, 8, 9, 10],
+    source: "directory"
   },
   {
     slug: "dalhousie-khajjiar",
@@ -574,7 +624,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Mar - Jun, Sep - Nov",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "kasol-parvati-valley",
@@ -587,7 +638,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 3.0,
     bestMonthsLabel: "Mar - Jun, Sep - Nov",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "bir-billing",
@@ -600,7 +652,8 @@ export const destinations: Destination[] = [
     rawTheme: "Paragliding",
     idealDays: 2.0,
     bestMonthsLabel: "Mar - Jun, Sep - Nov",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "great-himalayan-national-park",
@@ -613,7 +666,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife / Trek",
     idealDays: 3.0,
     bestMonthsLabel: "Apr - Jun, Sep - Oct",
-    bestMonths: [4, 5, 6, 9, 10]
+    bestMonths: [4, 5, 6, 9, 10],
+    source: "directory"
   },
   {
     slug: "chamba",
@@ -626,7 +680,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Mar - Jun, Sep - Nov",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "atal-tunnel-rohtang",
@@ -639,7 +694,8 @@ export const destinations: Destination[] = [
     rawTheme: "Scenic",
     idealDays: 1.0,
     bestMonthsLabel: "May - Oct",
-    bestMonths: [5, 6, 7, 8, 9, 10]
+    bestMonths: [5, 6, 7, 8, 9, 10],
+    source: "directory"
   },
   {
     slug: "tirthan-valley",
@@ -652,7 +708,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 3.0,
     bestMonthsLabel: "Mar - Jun, Sep - Nov",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "golden-temple-amritsar",
@@ -665,7 +722,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "jallianwala-bagh",
@@ -678,7 +736,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "wagah-border-ceremony",
@@ -691,7 +750,8 @@ export const destinations: Destination[] = [
     rawTheme: "Experience",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "anandpur-sahib-virasat-e-khalsa",
@@ -704,7 +764,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage / Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "qila-mubarak-patiala",
@@ -717,7 +778,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "kapurthala-jagatjit-palace",
@@ -730,7 +792,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "harike-wetland",
@@ -743,7 +806,8 @@ export const destinations: Destination[] = [
     rawTheme: "Birding",
     idealDays: 1.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "kurukshetra-brahma-sarovar",
@@ -756,7 +820,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual / Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "sultanpur-national-park",
@@ -769,7 +834,8 @@ export const destinations: Destination[] = [
     rawTheme: "Birding",
     idealDays: 0.5,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "morni-hills",
@@ -782,7 +848,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 1.0,
     bestMonthsLabel: "Sep - Mar",
-    bestMonths: [1, 2, 3, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "pinjore-gardens",
@@ -795,7 +862,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "surajkund",
@@ -808,7 +876,8 @@ export const destinations: Destination[] = [
     rawTheme: "Culture",
     idealDays: 0.5,
     bestMonthsLabel: "Feb",
-    bestMonths: [2]
+    bestMonths: [2],
+    source: "directory"
   },
   {
     slug: "damdama-lake",
@@ -821,7 +890,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "jaipur-amber-fort-hawa-mahal-city-palace",
@@ -834,7 +904,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "udaipur-lake-pichola-city-palace",
@@ -847,7 +918,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage / Lake",
     idealDays: 2.0,
     bestMonthsLabel: "Sep - Mar",
-    bestMonths: [1, 2, 3, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "jodhpur-mehrangarh-fort",
@@ -860,7 +932,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "jaisalmer-sam-sand-dunes",
@@ -873,7 +946,8 @@ export const destinations: Destination[] = [
     rawTheme: "Desert",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "pushkar",
@@ -886,7 +960,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ranthambore-national-park",
@@ -899,7 +974,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "mount-abu",
@@ -912,7 +988,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Sep - Mar",
-    bestMonths: [1, 2, 3, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "chittorgarh-fort",
@@ -925,7 +1002,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "bikaner-junagarh-fort-karni-mata",
@@ -938,7 +1016,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage / Desert",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "bundi",
@@ -951,7 +1030,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ajmer-sharif-dargah",
@@ -964,7 +1044,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "kumbhalgarh-ranakpur",
@@ -977,7 +1058,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "keoladeo-national-park-bharatpur",
@@ -990,7 +1072,8 @@ export const destinations: Destination[] = [
     rawTheme: "Birding",
     idealDays: 1.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "sariska-tiger-reserve",
@@ -1003,7 +1086,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "rock-garden",
@@ -1016,7 +1100,8 @@ export const destinations: Destination[] = [
     rawTheme: "Art",
     idealDays: 0.5,
     bestMonthsLabel: "Sep - Mar",
-    bestMonths: [1, 2, 3, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "sukhna-lake",
@@ -1029,7 +1114,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 0.5,
     bestMonthsLabel: "Sep - Mar",
-    bestMonths: [1, 2, 3, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "capitol-complex-unesco",
@@ -1042,7 +1128,8 @@ export const destinations: Destination[] = [
     rawTheme: "Architecture",
     idealDays: 0.5,
     bestMonthsLabel: "Sep - Mar",
-    bestMonths: [1, 2, 3, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "rose-garden",
@@ -1055,7 +1142,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 0.5,
     bestMonthsLabel: "Feb - Mar",
-    bestMonths: [2, 3]
+    bestMonths: [2, 3],
+    source: "directory"
   },
   {
     slug: "srinagar-dal-lake",
@@ -1068,7 +1156,8 @@ export const destinations: Destination[] = [
     rawTheme: "Lake / Houseboat",
     idealDays: 2.0,
     bestMonthsLabel: "Apr - Oct",
-    bestMonths: [4, 5, 6, 7, 8, 9, 10]
+    bestMonths: [4, 5, 6, 7, 8, 9, 10],
+    source: "directory"
   },
   {
     slug: "gulmarg",
@@ -1081,7 +1170,8 @@ export const destinations: Destination[] = [
     rawTheme: "Snow / Adventure",
     idealDays: 2.0,
     bestMonthsLabel: "Dec - Mar, May - Sep",
-    bestMonths: [1, 2, 3, 5, 6, 7, 8, 9, 12]
+    bestMonths: [1, 2, 3, 5, 6, 7, 8, 9, 12],
+    source: "directory"
   },
   {
     slug: "pahalgam",
@@ -1094,7 +1184,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Apr - Oct",
-    bestMonths: [4, 5, 6, 7, 8, 9, 10]
+    bestMonths: [4, 5, 6, 7, 8, 9, 10],
+    source: "directory"
   },
   {
     slug: "sonmarg",
@@ -1107,7 +1198,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 1.0,
     bestMonthsLabel: "May - Sep",
-    bestMonths: [5, 6, 7, 8, 9]
+    bestMonths: [5, 6, 7, 8, 9],
+    source: "directory"
   },
   {
     slug: "vaishno-devi-katra",
@@ -1120,7 +1212,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 2.0,
     bestMonthsLabel: "Mar - Oct",
-    bestMonths: [3, 4, 5, 6, 7, 8, 9, 10]
+    bestMonths: [3, 4, 5, 6, 7, 8, 9, 10],
+    source: "directory"
   },
   {
     slug: "yusmarg",
@@ -1133,7 +1226,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 1.0,
     bestMonthsLabel: "Apr - Oct",
-    bestMonths: [4, 5, 6, 7, 8, 9, 10]
+    bestMonths: [4, 5, 6, 7, 8, 9, 10],
+    source: "directory"
   },
   {
     slug: "doodhpathri",
@@ -1146,7 +1240,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 1.0,
     bestMonthsLabel: "May - Sep",
-    bestMonths: [5, 6, 7, 8, 9]
+    bestMonths: [5, 6, 7, 8, 9],
+    source: "directory"
   },
   {
     slug: "amarnath-yatra",
@@ -1159,7 +1254,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 3.0,
     bestMonthsLabel: "Jul - Aug",
-    bestMonths: [7, 8]
+    bestMonths: [7, 8],
+    source: "directory"
   },
   {
     slug: "jammu-raghunath-temple-bahu-fort",
@@ -1172,7 +1268,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "leh-shanti-stupa-leh-palace",
@@ -1185,7 +1282,8 @@ export const destinations: Destination[] = [
     rawTheme: "Culture",
     idealDays: 2.0,
     bestMonthsLabel: "May - Sep",
-    bestMonths: [5, 6, 7, 8, 9]
+    bestMonths: [5, 6, 7, 8, 9],
+    source: "directory"
   },
   {
     slug: "pangong-tso",
@@ -1198,7 +1296,8 @@ export const destinations: Destination[] = [
     rawTheme: "Lake",
     idealDays: 2.0,
     bestMonthsLabel: "May - Sep",
-    bestMonths: [5, 6, 7, 8, 9]
+    bestMonths: [5, 6, 7, 8, 9],
+    source: "directory"
   },
   {
     slug: "nubra-valley-diskit",
@@ -1211,7 +1310,8 @@ export const destinations: Destination[] = [
     rawTheme: "Desert / Valley",
     idealDays: 2.0,
     bestMonthsLabel: "May - Sep",
-    bestMonths: [5, 6, 7, 8, 9]
+    bestMonths: [5, 6, 7, 8, 9],
+    source: "directory"
   },
   {
     slug: "tso-moriri",
@@ -1224,7 +1324,8 @@ export const destinations: Destination[] = [
     rawTheme: "Lake",
     idealDays: 2.0,
     bestMonthsLabel: "Jun - Sep",
-    bestMonths: [6, 7, 8, 9]
+    bestMonths: [6, 7, 8, 9],
+    source: "directory"
   },
   {
     slug: "hemis-thiksey-monasteries",
@@ -1237,7 +1338,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "May - Sep",
-    bestMonths: [5, 6, 7, 8, 9]
+    bestMonths: [5, 6, 7, 8, 9],
+    source: "directory"
   },
   {
     slug: "khardung-la",
@@ -1250,7 +1352,8 @@ export const destinations: Destination[] = [
     rawTheme: "Scenic Pass",
     idealDays: 0.5,
     bestMonthsLabel: "May - Sep",
-    bestMonths: [5, 6, 7, 8, 9]
+    bestMonths: [5, 6, 7, 8, 9],
+    source: "directory"
   },
   {
     slug: "zanskar-chadar-trek",
@@ -1263,7 +1366,8 @@ export const destinations: Destination[] = [
     rawTheme: "Adventure",
     idealDays: 8.0,
     bestMonthsLabel: "Jan - Feb",
-    bestMonths: [1, 2]
+    bestMonths: [1, 2],
+    source: "directory"
   },
   {
     slug: "kargil-drass",
@@ -1276,7 +1380,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Jun - Sep",
-    bestMonths: [6, 7, 8, 9]
+    bestMonths: [6, 7, 8, 9],
+    source: "directory"
   },
   {
     slug: "magnetic-hill-sangam",
@@ -1289,7 +1394,8 @@ export const destinations: Destination[] = [
     rawTheme: "Scenic",
     idealDays: 0.5,
     bestMonthsLabel: "May - Sep",
-    bestMonths: [5, 6, 7, 8, 9]
+    bestMonths: [5, 6, 7, 8, 9],
+    source: "directory"
   },
   {
     slug: "mumbai-gateway-of-india-marine-drive",
@@ -1302,7 +1408,8 @@ export const destinations: Destination[] = [
     rawTheme: "Urban / Heritage",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "elephanta-caves-unesco",
@@ -1315,7 +1422,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ajanta-caves-unesco",
@@ -1328,7 +1436,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ellora-caves-unesco",
@@ -1341,7 +1450,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "lonavala-khandala",
@@ -1354,7 +1464,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Jun - Feb",
-    bestMonths: [1, 2, 6, 7, 8, 9, 10, 11, 12]
+    bestMonths: [1, 2, 6, 7, 8, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "mahabaleshwar-panchgani",
@@ -1367,7 +1478,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "matheran",
@@ -1380,7 +1492,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - May",
-    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "shirdi",
@@ -1393,7 +1506,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "nashik-trimbakeshwar-vineyards",
@@ -1406,7 +1520,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual / Wine",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "tadoba-andhari-tiger-reserve",
@@ -1419,7 +1534,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "alibaug-kashid",
@@ -1432,7 +1548,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "tarkarli-malvan",
@@ -1445,7 +1562,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach / Scuba",
     idealDays: 3.0,
     bestMonthsLabel: "Oct - May",
-    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "kaas-plateau",
@@ -1459,6 +1577,7 @@ export const destinations: Destination[] = [
     idealDays: 1.0,
     bestMonthsLabel: "Aug - Sep",
     bestMonths: [8, 9],
+    source: "directory",
     monsoonProduct: true
   },
   {
@@ -1472,7 +1591,8 @@ export const destinations: Destination[] = [
     rawTheme: "Urban / Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "raigad-sinhagad-forts",
@@ -1485,7 +1605,8 @@ export const destinations: Destination[] = [
     rawTheme: "Trek / Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "white-rann-dhordo",
@@ -1498,7 +1619,8 @@ export const destinations: Destination[] = [
     rawTheme: "Desert",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "bhuj-aina-mahal-prag-mahal",
@@ -1511,7 +1633,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "dholavira-unesco",
@@ -1524,7 +1647,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "mandvi-beach-vijay-vilas-palace",
@@ -1537,7 +1661,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach",
     idealDays: 1.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "little-rann-wild-ass-sanctuary",
@@ -1550,7 +1675,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 1.0,
     bestMonthsLabel: "Nov - Mar",
-    bestMonths: [1, 2, 3, 11, 12]
+    bestMonths: [1, 2, 3, 11, 12],
+    source: "directory"
   },
   {
     slug: "somnath-temple",
@@ -1563,7 +1689,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "dwarka-bet-dwarka",
@@ -1576,7 +1703,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "gir-national-park",
@@ -1589,7 +1717,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - May",
-    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "junagadh-girnar",
@@ -1602,7 +1731,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage / Trek",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "palitana-jain-temples",
@@ -1615,7 +1745,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual / Trek",
     idealDays: 1.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "velavadar-blackbuck-national-park",
@@ -1628,7 +1759,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "marine-national-park",
@@ -1641,7 +1773,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "porbandar-kirti-mandir",
@@ -1654,7 +1787,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "rani-ki-vav-patan-unesco",
@@ -1667,7 +1801,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "modhera-sun-temple",
@@ -1680,7 +1815,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ambaji",
@@ -1693,7 +1829,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "vadnagar",
@@ -1706,7 +1843,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "polo-forest",
@@ -1719,7 +1857,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 1.0,
     bestMonthsLabel: "Jul - Feb",
-    bestMonths: [1, 2, 7, 8, 9, 10, 11, 12]
+    bestMonths: [1, 2, 7, 8, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ahmedabad-old-city-unesco",
@@ -1732,7 +1871,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "adalaj-stepwell",
@@ -1745,7 +1885,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "champaner-pavagadh-unesco",
@@ -1758,7 +1899,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "vadodara-laxmi-vilas-palace",
@@ -1771,7 +1913,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "chhota-udaipur-pithora-art",
@@ -1784,7 +1927,8 @@ export const destinations: Destination[] = [
     rawTheme: "Tribal",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "statue-of-unity-kevadia",
@@ -1797,7 +1941,8 @@ export const destinations: Destination[] = [
     rawTheme: "Modern",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "saputara",
@@ -1811,6 +1956,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Jun - Nov",
     bestMonths: [6, 7, 8, 9, 10, 11],
+    source: "directory",
     monsoonProduct: true
   },
   {
@@ -1824,7 +1970,8 @@ export const destinations: Destination[] = [
     rawTheme: "Urban / Beach",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "baga-calangute-anjuna",
@@ -1837,7 +1984,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "vagator-chapora-fort",
@@ -1850,7 +1998,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach / Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "palolem-agonda",
@@ -1863,7 +2012,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "colva-benaulim",
@@ -1876,7 +2026,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach",
     idealDays: 1.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "old-goa-churches-unesco",
@@ -1889,7 +2040,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "fontainhas-panaji",
@@ -1902,7 +2054,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "dudhsagar-falls",
@@ -1915,7 +2068,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 1.0,
     bestMonthsLabel: "Jul - Feb",
-    bestMonths: [1, 2, 7, 8, 9, 10, 11, 12]
+    bestMonths: [1, 2, 7, 8, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "fort-aguada",
@@ -1928,7 +2082,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "divar-chorao-islands",
@@ -1941,7 +2096,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 0.5,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "bhagwan-mahavir-wildlife-sanctuary",
@@ -1954,7 +2110,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "diu-fort-nagoa-beach",
@@ -1967,7 +2124,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach / Heritage",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ghoghla-beach",
@@ -1980,7 +2138,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "devka-jampore-beaches",
@@ -1993,7 +2152,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "moti-daman-fort",
@@ -2006,7 +2166,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "silvassa-vanganga-lake",
@@ -2019,7 +2180,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "dudhni",
@@ -2032,7 +2194,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature / Watersports",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "hampi-unesco",
@@ -2045,7 +2208,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Feb",
-    bestMonths: [1, 2, 10, 11, 12]
+    bestMonths: [1, 2, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "mysuru-palace-chamundi-hill",
@@ -2058,7 +2222,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Feb",
-    bestMonths: [1, 2, 10, 11, 12]
+    bestMonths: [1, 2, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "coorg-madikeri",
@@ -2071,7 +2236,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills / Coffee",
     idealDays: 3.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "chikmagalur",
@@ -2084,7 +2250,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills / Coffee",
     idealDays: 2.0,
     bestMonthsLabel: "Sep - Mar",
-    bestMonths: [1, 2, 3, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "gokarna",
@@ -2097,7 +2264,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "badami-aihole-pattadakal",
@@ -2110,7 +2278,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Feb",
-    bestMonths: [1, 2, 10, 11, 12]
+    bestMonths: [1, 2, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "bandipur-national-park",
@@ -2123,7 +2292,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - May",
-    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "nagarhole-national-park",
@@ -2136,7 +2306,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - May",
-    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "jog-falls",
@@ -2150,6 +2321,7 @@ export const destinations: Destination[] = [
     idealDays: 1.0,
     bestMonthsLabel: "Aug - Dec",
     bestMonths: [8, 9, 10, 11, 12],
+    source: "directory",
     monsoonProduct: true
   },
   {
@@ -2163,7 +2335,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Feb",
-    bestMonths: [1, 2, 10, 11, 12]
+    bestMonths: [1, 2, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "bengaluru-lalbagh-cubbon-park",
@@ -2176,7 +2349,8 @@ export const destinations: Destination[] = [
     rawTheme: "Urban",
     idealDays: 1.0,
     bestMonthsLabel: "Year round",
-    bestMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "murudeshwar",
@@ -2189,7 +2363,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual / Beach",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "shravanabelagola",
@@ -2202,7 +2377,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Feb",
-    bestMonths: [1, 2, 10, 11, 12]
+    bestMonths: [1, 2, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "dandeli",
@@ -2215,7 +2391,8 @@ export const destinations: Destination[] = [
     rawTheme: "Adventure",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - May",
-    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "udupi-malpe-beach",
@@ -2228,7 +2405,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual / Beach",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "alleppey-backwaters",
@@ -2241,7 +2419,8 @@ export const destinations: Destination[] = [
     rawTheme: "Backwater",
     idealDays: 2.0,
     bestMonthsLabel: "Sep - Mar",
-    bestMonths: [1, 2, 3, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "munnar",
@@ -2254,7 +2433,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills / Tea",
     idealDays: 3.0,
     bestMonthsLabel: "Sep - Mar",
-    bestMonths: [1, 2, 3, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "fort-kochi-mattancherry",
@@ -2267,7 +2447,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage / Urban",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "thekkady-periyar-reserve",
@@ -2280,7 +2461,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Sep - Mar",
-    bestMonths: [1, 2, 3, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "varkala-cliff",
@@ -2293,7 +2475,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "kovalam",
@@ -2306,7 +2489,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "wayanad",
@@ -2319,7 +2503,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills / Nature",
     idealDays: 3.0,
     bestMonthsLabel: "Oct - May",
-    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "kumarakom",
@@ -2332,7 +2517,8 @@ export const destinations: Destination[] = [
     rawTheme: "Backwater / Birding",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "athirappilly-falls",
@@ -2346,6 +2532,7 @@ export const destinations: Destination[] = [
     idealDays: 1.0,
     bestMonthsLabel: "Jun - Sep",
     bestMonths: [6, 7, 8, 9],
+    source: "directory",
     monsoonProduct: true
   },
   {
@@ -2359,7 +2546,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Sep - Mar",
-    bestMonths: [1, 2, 3, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "bekal-fort",
@@ -2372,7 +2560,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage / Beach",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Feb",
-    bestMonths: [1, 2, 10, 11, 12]
+    bestMonths: [1, 2, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "guruvayur-temple",
@@ -2385,7 +2574,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "silent-valley-national-park",
@@ -2398,7 +2588,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 1.0,
     bestMonthsLabel: "Sep - Mar",
-    bestMonths: [1, 2, 3, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "poovar",
@@ -2411,7 +2602,8 @@ export const destinations: Destination[] = [
     rawTheme: "Backwater",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "meenakshi-temple-madurai",
@@ -2424,7 +2616,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ooty-udhagamandalam",
@@ -2437,7 +2630,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 3.0,
     bestMonthsLabel: "Oct - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "kodaikanal",
@@ -2450,7 +2644,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "mahabalipuram-unesco",
@@ -2463,7 +2658,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "thanjavur-brihadeeswarar-temple",
@@ -2476,7 +2672,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "rameswaram",
@@ -2489,7 +2686,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "kanyakumari",
@@ -2502,7 +2700,8 @@ export const destinations: Destination[] = [
     rawTheme: "Scenic / Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "chennai-marina-kapaleeshwarar",
@@ -2515,7 +2714,8 @@ export const destinations: Destination[] = [
     rawTheme: "Urban",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "coonoor",
@@ -2528,7 +2728,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills / Tea",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "chettinad-karaikudi",
@@ -2541,7 +2742,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage / Food",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "mudumalai-tiger-reserve",
@@ -2554,7 +2756,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - May",
-    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "yercaud",
@@ -2567,7 +2770,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "kumbakonam-chidambaram",
@@ -2580,7 +2784,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "hogenakkal-falls",
@@ -2593,7 +2798,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 1.0,
     bestMonthsLabel: "Jul - Feb",
-    bestMonths: [1, 2, 7, 8, 9, 10, 11, 12]
+    bestMonths: [1, 2, 7, 8, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "valparai",
@@ -2606,7 +2812,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Sep - Mar",
-    bestMonths: [1, 2, 3, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "tirumala-tirupati",
@@ -2619,7 +2826,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 2.0,
     bestMonthsLabel: "Sep - Feb",
-    bestMonths: [1, 2, 9, 10, 11, 12]
+    bestMonths: [1, 2, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "visakhapatnam-rk-beach-kailasagiri",
@@ -2632,7 +2840,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach / Urban",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "araku-valley",
@@ -2645,7 +2854,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "borra-caves",
@@ -2658,7 +2868,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "lepakshi",
@@ -2671,7 +2882,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "gandikota",
@@ -2684,7 +2896,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature / Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Feb",
-    bestMonths: [1, 2, 10, 11, 12]
+    bestMonths: [1, 2, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "undavalli-caves-amaravati",
@@ -2697,7 +2910,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "srisailam",
@@ -2710,7 +2924,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "papikondalu",
@@ -2723,7 +2938,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature / River",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "horsley-hills",
@@ -2736,7 +2952,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "hyderabad-charminar-old-city",
@@ -2749,7 +2966,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage / Food",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "golconda-fort",
@@ -2762,7 +2980,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "chowmahalla-falaknuma-palace",
@@ -2775,7 +2994,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ramoji-film-city",
@@ -2788,7 +3008,8 @@ export const destinations: Destination[] = [
     rawTheme: "Entertainment",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "warangal-fort-thousand-pillar-temple",
@@ -2801,7 +3022,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ramappa-temple-unesco",
@@ -2814,7 +3036,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "bhadrachalam",
@@ -2827,7 +3050,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "nagarjuna-sagar-nagarjunakonda",
@@ -2840,7 +3064,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage / Nature",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "kuntala-pochera-falls",
@@ -2853,7 +3078,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 1.0,
     bestMonthsLabel: "Jul - Nov",
-    bestMonths: [7, 8, 9, 10, 11]
+    bestMonths: [7, 8, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "ananthagiri-hills",
@@ -2866,7 +3092,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "white-town-french-quarter",
@@ -2879,7 +3106,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "auroville",
@@ -2892,7 +3120,8 @@ export const destinations: Destination[] = [
     rawTheme: "Community",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "promenade-beach",
@@ -2905,7 +3134,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "paradise-serenity-beach",
@@ -2918,7 +3148,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "sri-aurobindo-ashram",
@@ -2931,7 +3162,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "karaikal",
@@ -2944,7 +3176,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "mahe",
@@ -2957,7 +3190,8 @@ export const destinations: Destination[] = [
     rawTheme: "Coastal",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "yanam",
@@ -2970,7 +3204,8 @@ export const destinations: Destination[] = [
     rawTheme: "Coastal",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "agatti-island",
@@ -2984,6 +3219,7 @@ export const destinations: Destination[] = [
     idealDays: 3.0,
     bestMonthsLabel: "Oct - May",
     bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory",
     permitRequired: true,
     ferryOrFlightOnly: true
   },
@@ -2999,6 +3235,7 @@ export const destinations: Destination[] = [
     idealDays: 3.0,
     bestMonthsLabel: "Oct - May",
     bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory",
     permitRequired: true,
     ferryOrFlightOnly: true
   },
@@ -3014,6 +3251,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Oct - May",
     bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory",
     permitRequired: true,
     ferryOrFlightOnly: true
   },
@@ -3029,6 +3267,7 @@ export const destinations: Destination[] = [
     idealDays: 3.0,
     bestMonthsLabel: "Oct - May",
     bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory",
     permitRequired: true,
     ferryOrFlightOnly: true
   },
@@ -3044,6 +3283,7 @@ export const destinations: Destination[] = [
     idealDays: 3.0,
     bestMonthsLabel: "Oct - May",
     bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory",
     permitRequired: true,
     ferryOrFlightOnly: true
   },
@@ -3059,6 +3299,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Oct - May",
     bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory",
     permitRequired: true,
     ferryOrFlightOnly: true
   },
@@ -3074,6 +3315,7 @@ export const destinations: Destination[] = [
     idealDays: 3.0,
     bestMonthsLabel: "Oct - May",
     bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory",
     ferryOrFlightOnly: true
   },
   {
@@ -3088,6 +3330,7 @@ export const destinations: Destination[] = [
     idealDays: 1.0,
     bestMonthsLabel: "Oct - May",
     bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory",
     ferryOrFlightOnly: true
   },
   {
@@ -3102,6 +3345,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Oct - May",
     bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory",
     ferryOrFlightOnly: true
   },
   {
@@ -3116,6 +3360,7 @@ export const destinations: Destination[] = [
     idealDays: 0.5,
     bestMonthsLabel: "Oct - May",
     bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory",
     ferryOrFlightOnly: true
   },
   {
@@ -3130,6 +3375,7 @@ export const destinations: Destination[] = [
     idealDays: 0.5,
     bestMonthsLabel: "Oct - May",
     bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory",
     ferryOrFlightOnly: true
   },
   {
@@ -3144,6 +3390,7 @@ export const destinations: Destination[] = [
     idealDays: 0.5,
     bestMonthsLabel: "Oct - May",
     bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory",
     ferryOrFlightOnly: true
   },
   {
@@ -3158,6 +3405,7 @@ export const destinations: Destination[] = [
     idealDays: 1.0,
     bestMonthsLabel: "Oct - May",
     bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory",
     ferryOrFlightOnly: true
   },
   {
@@ -3172,6 +3420,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Oct - May",
     bestMonths: [1, 2, 3, 4, 5, 10, 11, 12],
+    source: "directory",
     ferryOrFlightOnly: true
   },
   {
@@ -3185,7 +3434,8 @@ export const destinations: Destination[] = [
     rawTheme: "Urban / Heritage",
     idealDays: 3.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "darjeeling-toy-train",
@@ -3198,7 +3448,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills / Tea",
     idealDays: 3.0,
     bestMonthsLabel: "Mar - Jun, Sep - Nov",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "sundarbans-national-park-unesco",
@@ -3211,7 +3462,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "kalimpong",
@@ -3224,7 +3476,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Mar - Jun, Sep - Nov",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "kurseong",
@@ -3237,7 +3490,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills / Tea",
     idealDays: 1.0,
     bestMonthsLabel: "Mar - Jun, Sep - Nov",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "digha",
@@ -3250,7 +3504,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "shantiniketan",
@@ -3263,7 +3518,8 @@ export const destinations: Destination[] = [
     rawTheme: "Culture",
     idealDays: 1.0,
     bestMonthsLabel: "Nov - Mar",
-    bestMonths: [1, 2, 3, 11, 12]
+    bestMonths: [1, 2, 3, 11, 12],
+    source: "directory"
   },
   {
     slug: "murshidabad-hazarduari",
@@ -3276,7 +3532,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "bishnupur-terracotta-temples",
@@ -3289,7 +3546,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "dooars-jaldapara-gorumara",
@@ -3302,7 +3560,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Apr",
-    bestMonths: [1, 2, 3, 4, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "mirik",
@@ -3315,7 +3574,8 @@ export const destinations: Destination[] = [
     rawTheme: "Lake / Hills",
     idealDays: 1.0,
     bestMonthsLabel: "Mar - Jun, Sep - Nov",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11],
+    source: "directory"
   },
   {
     slug: "sandakphu-trek",
@@ -3328,7 +3588,8 @@ export const destinations: Destination[] = [
     rawTheme: "Trek",
     idealDays: 5.0,
     bestMonthsLabel: "Apr - May, Oct - Nov",
-    bestMonths: [4, 5, 10, 11]
+    bestMonths: [4, 5, 10, 11],
+    source: "directory"
   },
   {
     slug: "mahabodhi-temple-bodh-gaya-unesco",
@@ -3341,7 +3602,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "nalanda-mahavihara-unesco",
@@ -3354,7 +3616,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "rajgir-vishwa-shanti-stupa",
@@ -3367,7 +3630,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual / Nature",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "vaishali",
@@ -3380,7 +3644,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "patna-golghar-takht-sri-patna-sahib",
@@ -3393,7 +3658,8 @@ export const destinations: Destination[] = [
     rawTheme: "Urban / Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "valmiki-tiger-reserve",
@@ -3406,7 +3672,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 11, 12],
+    source: "directory"
   },
   {
     slug: "vikramshila-ruins",
@@ -3419,7 +3686,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "madhubani",
@@ -3432,7 +3700,8 @@ export const destinations: Destination[] = [
     rawTheme: "Art / Culture",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "hundru-dassam-falls",
@@ -3445,7 +3714,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 1.0,
     bestMonthsLabel: "Aug - Feb",
-    bestMonths: [1, 2, 8, 9, 10, 11, 12]
+    bestMonths: [1, 2, 8, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "netarhat",
@@ -3458,7 +3728,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "baidyanath-dham-deoghar",
@@ -3471,7 +3742,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "betla-national-park",
@@ -3484,7 +3756,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Mar",
-    bestMonths: [1, 2, 3, 11, 12]
+    bestMonths: [1, 2, 3, 11, 12],
+    source: "directory"
   },
   {
     slug: "parasnath-hill-shikharji",
@@ -3497,7 +3770,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual / Trek",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "jamshedpur-jubilee-park-dalma",
@@ -3510,7 +3784,8 @@ export const destinations: Destination[] = [
     rawTheme: "Urban / Nature",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "patratu-valley",
@@ -3523,7 +3798,8 @@ export const destinations: Destination[] = [
     rawTheme: "Scenic",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "jagannath-temple-puri-beach",
@@ -3536,7 +3812,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual / Beach",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "konark-sun-temple-unesco",
@@ -3549,7 +3826,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "bhubaneswar-lingaraj-mukteshwar",
@@ -3562,7 +3840,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "chilika-lake",
@@ -3575,7 +3854,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature / Birding",
     idealDays: 1.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "udayagiri-khandagiri-caves",
@@ -3588,7 +3868,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "simlipal-national-park",
@@ -3601,7 +3882,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 11, 12],
+    source: "directory"
   },
   {
     slug: "gopalpur-on-sea",
@@ -3614,7 +3896,8 @@ export const destinations: Destination[] = [
     rawTheme: "Beach",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "daringbadi",
@@ -3627,7 +3910,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ratnagiri-lalitgiri",
@@ -3640,7 +3924,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "bhitarkanika-national-park",
@@ -3653,7 +3938,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Feb",
-    bestMonths: [1, 2, 11, 12]
+    bestMonths: [1, 2, 11, 12],
+    source: "directory"
   },
   {
     slug: "khajuraho-temples-unesco",
@@ -3666,7 +3952,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "bandhavgarh-national-park",
@@ -3679,7 +3966,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "kanha-national-park",
@@ -3692,7 +3980,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "pench-national-park",
@@ -3705,7 +3994,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "satpura-national-park",
@@ -3718,7 +4008,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "sanchi-stupa-unesco",
@@ -3731,7 +4022,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "bhimbetka-rock-shelters-unesco",
@@ -3744,7 +4036,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "gwalior-fort",
@@ -3757,7 +4050,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "orchha",
@@ -3770,7 +4064,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ujjain-mahakaleshwar",
@@ -3783,7 +4078,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "omkareshwar",
@@ -3796,7 +4092,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "pachmarhi",
@@ -3809,7 +4106,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "mandu",
@@ -3822,7 +4120,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 2.0,
     bestMonthsLabel: "Jul - Mar",
-    bestMonths: [1, 2, 3, 7, 8, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 7, 8, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "bhedaghat-marble-rocks",
@@ -3835,7 +4134,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "indore-rajwada-sarafa-bazaar",
@@ -3848,7 +4148,8 @@ export const destinations: Destination[] = [
     rawTheme: "Urban / Food",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "chitrakote-falls",
@@ -3862,6 +4163,7 @@ export const destinations: Destination[] = [
     idealDays: 1.0,
     bestMonthsLabel: "Jul - Oct",
     bestMonths: [7, 8, 9, 10],
+    source: "directory",
     monsoonProduct: true
   },
   {
@@ -3875,7 +4177,8 @@ export const destinations: Destination[] = [
     rawTheme: "Tribal Culture",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "kanger-valley-np-kutumsar-caves",
@@ -3888,7 +4191,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 11, 12],
+    source: "directory"
   },
   {
     slug: "tirathgarh-falls",
@@ -3901,7 +4205,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 0.5,
     bestMonthsLabel: "Jul - Feb",
-    bestMonths: [1, 2, 7, 8, 9, 10, 11, 12]
+    bestMonths: [1, 2, 7, 8, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "sirpur",
@@ -3914,7 +4219,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "bhoramdeo-temple",
@@ -3927,7 +4233,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "mainpat",
@@ -3940,7 +4247,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "barnawapara-sanctuary",
@@ -3953,7 +4261,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Jun",
-    bestMonths: [1, 2, 3, 4, 5, 6, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 6, 11, 12],
+    source: "directory"
   },
   {
     slug: "kaziranga-national-park-unesco",
@@ -3966,7 +4275,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Apr",
-    bestMonths: [1, 2, 3, 4, 11, 12]
+    bestMonths: [1, 2, 3, 4, 11, 12],
+    source: "directory"
   },
   {
     slug: "kamakhya-temple-guwahati",
@@ -3979,7 +4289,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Apr",
-    bestMonths: [1, 2, 3, 4, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "majuli-river-island",
@@ -3992,7 +4303,8 @@ export const destinations: Destination[] = [
     rawTheme: "Culture / Nature",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "manas-national-park-unesco",
@@ -4005,7 +4317,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Apr",
-    bestMonths: [1, 2, 3, 4, 11, 12]
+    bestMonths: [1, 2, 3, 4, 11, 12],
+    source: "directory"
   },
   {
     slug: "sivasagar-ahom-monuments",
@@ -4018,7 +4331,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "jorhat-tea-estates",
@@ -4031,7 +4345,8 @@ export const destinations: Destination[] = [
     rawTheme: "Tea",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Apr",
-    bestMonths: [1, 2, 3, 4, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "pobitora-sanctuary",
@@ -4044,7 +4359,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 1.0,
     bestMonthsLabel: "Nov - Apr",
-    bestMonths: [1, 2, 3, 4, 11, 12]
+    bestMonths: [1, 2, 3, 4, 11, 12],
+    source: "directory"
   },
   {
     slug: "nameri-national-park",
@@ -4057,7 +4373,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 2.0,
     bestMonthsLabel: "Nov - Apr",
-    bestMonths: [1, 2, 3, 4, 11, 12]
+    bestMonths: [1, 2, 3, 4, 11, 12],
+    source: "directory"
   },
   {
     slug: "haflong",
@@ -4070,7 +4387,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "tawang-monastery",
@@ -4084,6 +4402,7 @@ export const destinations: Destination[] = [
     idealDays: 3.0,
     bestMonthsLabel: "Mar - Oct",
     bestMonths: [3, 4, 5, 6, 7, 8, 9, 10],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4098,6 +4417,7 @@ export const destinations: Destination[] = [
     idealDays: 0.5,
     bestMonthsLabel: "Apr - Oct",
     bestMonths: [4, 5, 6, 7, 8, 9, 10],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4112,6 +4432,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Mar - Oct",
     bestMonths: [3, 4, 5, 6, 7, 8, 9, 10],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4126,6 +4447,7 @@ export const destinations: Destination[] = [
     idealDays: 1.0,
     bestMonthsLabel: "Mar - Oct",
     bestMonths: [3, 4, 5, 6, 7, 8, 9, 10],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4140,6 +4462,7 @@ export const destinations: Destination[] = [
     idealDays: 1.0,
     bestMonthsLabel: "Mar - Oct",
     bestMonths: [3, 4, 5, 6, 7, 8, 9, 10],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4154,6 +4477,7 @@ export const destinations: Destination[] = [
     idealDays: 3.0,
     bestMonthsLabel: "Mar - Oct",
     bestMonths: [3, 4, 5, 6, 7, 8, 9, 10],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4168,6 +4492,7 @@ export const destinations: Destination[] = [
     idealDays: 3.0,
     bestMonthsLabel: "Oct - Apr",
     bestMonths: [1, 2, 3, 4, 10, 11, 12],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4182,6 +4507,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Apr",
     bestMonths: [1, 2, 3, 4, 10, 11, 12],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4195,7 +4521,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature / Waterfalls",
     idealDays: 2.0,
     bestMonthsLabel: "Sep - May",
-    bestMonths: [1, 2, 3, 4, 5, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "living-root-bridges-nongriat",
@@ -4208,7 +4535,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature / Trek",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Apr",
-    bestMonths: [1, 2, 3, 4, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "dawki-umngot-river",
@@ -4221,7 +4549,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 1.0,
     bestMonthsLabel: "Nov - Apr",
-    bestMonths: [1, 2, 3, 4, 11, 12]
+    bestMonths: [1, 2, 3, 4, 11, 12],
+    source: "directory"
   },
   {
     slug: "mawlynnong",
@@ -4234,7 +4563,8 @@ export const destinations: Destination[] = [
     rawTheme: "Village",
     idealDays: 1.0,
     bestMonthsLabel: "Sep - May",
-    bestMonths: [1, 2, 3, 4, 5, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "shillong-wards-lake-elephant-falls",
@@ -4247,7 +4577,8 @@ export const destinations: Destination[] = [
     rawTheme: "Urban / Nature",
     idealDays: 2.0,
     bestMonthsLabel: "Sep - May",
-    bestMonths: [1, 2, 3, 4, 5, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "nohkalikai-falls",
@@ -4260,7 +4591,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 0.5,
     bestMonthsLabel: "Jun - Oct",
-    bestMonths: [6, 7, 8, 9, 10]
+    bestMonths: [6, 7, 8, 9, 10],
+    source: "directory"
   },
   {
     slug: "laitlum-canyon",
@@ -4273,7 +4605,8 @@ export const destinations: Destination[] = [
     rawTheme: "Scenic",
     idealDays: 0.5,
     bestMonthsLabel: "Sep - May",
-    bestMonths: [1, 2, 3, 4, 5, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "mawsmai-krem-caves",
@@ -4286,7 +4619,8 @@ export const destinations: Destination[] = [
     rawTheme: "Adventure",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Apr",
-    bestMonths: [1, 2, 3, 4, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "mawsynram",
@@ -4299,7 +4633,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 1.0,
     bestMonthsLabel: "Sep - May",
-    bestMonths: [1, 2, 3, 4, 5, 9, 10, 11, 12]
+    bestMonths: [1, 2, 3, 4, 5, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "loktak-lake-phumdis",
@@ -4312,7 +4647,8 @@ export const destinations: Destination[] = [
     rawTheme: "Nature",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "keibul-lamjao-national-park",
@@ -4325,7 +4661,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "kangla-fort-imphal",
@@ -4338,7 +4675,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ima-keithel-mothers-market",
@@ -4351,7 +4689,8 @@ export const destinations: Destination[] = [
     rawTheme: "Culture",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ina-memorial-moirang",
@@ -4364,7 +4703,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "dzukou-valley",
@@ -4377,7 +4717,8 @@ export const destinations: Destination[] = [
     rawTheme: "Trek",
     idealDays: 2.0,
     bestMonthsLabel: "Jun - Sep",
-    bestMonths: [6, 7, 8, 9]
+    bestMonths: [6, 7, 8, 9],
+    source: "directory"
   },
   {
     slug: "aizawl",
@@ -4391,6 +4732,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
     bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4405,6 +4747,7 @@ export const destinations: Destination[] = [
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
     bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4419,6 +4762,7 @@ export const destinations: Destination[] = [
     idealDays: 0.5,
     bestMonthsLabel: "Jun - Oct",
     bestMonths: [6, 7, 8, 9, 10],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4433,6 +4777,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
     bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4447,6 +4792,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
     bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4461,6 +4807,7 @@ export const destinations: Destination[] = [
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
     bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4475,6 +4822,7 @@ export const destinations: Destination[] = [
     idealDays: 3.0,
     bestMonthsLabel: "Dec 1 - 10",
     bestMonths: [12],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4489,6 +4837,7 @@ export const destinations: Destination[] = [
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
     bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4503,6 +4852,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Jun - Sep",
     bestMonths: [6, 7, 8, 9],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4517,6 +4867,7 @@ export const destinations: Destination[] = [
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
     bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4531,6 +4882,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
     bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4545,6 +4897,7 @@ export const destinations: Destination[] = [
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
     bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4558,7 +4911,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "neermahal-water-palace",
@@ -4571,7 +4925,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "unakoti-rock-carvings",
@@ -4584,7 +4939,8 @@ export const destinations: Destination[] = [
     rawTheme: "Heritage",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "jampui-hills",
@@ -4597,7 +4953,8 @@ export const destinations: Destination[] = [
     rawTheme: "Hills",
     idealDays: 2.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "sepahijala-wildlife-sanctuary",
@@ -4610,7 +4967,8 @@ export const destinations: Destination[] = [
     rawTheme: "Wildlife",
     idealDays: 1.0,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "tripura-sundari-temple-udaipur",
@@ -4623,7 +4981,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 0.5,
     bestMonthsLabel: "Oct - Mar",
-    bestMonths: [1, 2, 3, 10, 11, 12]
+    bestMonths: [1, 2, 3, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "gangtok-mg-marg-rumtek",
@@ -4636,7 +4995,8 @@ export const destinations: Destination[] = [
     rawTheme: "Urban / Spiritual",
     idealDays: 2.0,
     bestMonthsLabel: "Mar - May, Oct - Dec",
-    bestMonths: [3, 4, 5, 10, 11, 12]
+    bestMonths: [3, 4, 5, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "tsomgo-lake-baba-mandir",
@@ -4649,7 +5009,8 @@ export const destinations: Destination[] = [
     rawTheme: "Lake",
     idealDays: 1.0,
     bestMonthsLabel: "Mar - May, Oct - Dec",
-    bestMonths: [3, 4, 5, 10, 11, 12]
+    bestMonths: [3, 4, 5, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "nathu-la-pass",
@@ -4662,7 +5023,8 @@ export const destinations: Destination[] = [
     rawTheme: "Scenic Pass",
     idealDays: 0.5,
     bestMonthsLabel: "May - Oct",
-    bestMonths: [5, 6, 7, 8, 9, 10]
+    bestMonths: [5, 6, 7, 8, 9, 10],
+    source: "directory"
   },
   {
     slug: "yumthang-valley",
@@ -4676,6 +5038,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Mar - May",
     bestMonths: [3, 4, 5],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4690,6 +5053,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Apr - Jun, Oct - Nov",
     bestMonths: [4, 5, 6, 10, 11],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4703,7 +5067,8 @@ export const destinations: Destination[] = [
     rawTheme: "Scenic",
     idealDays: 2.0,
     bestMonthsLabel: "Mar - May, Oct - Dec",
-    bestMonths: [3, 4, 5, 10, 11, 12]
+    bestMonths: [3, 4, 5, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "ravangla-buddha-park",
@@ -4716,7 +5081,8 @@ export const destinations: Destination[] = [
     rawTheme: "Spiritual",
     idealDays: 1.0,
     bestMonthsLabel: "Mar - May, Oct - Dec",
-    bestMonths: [3, 4, 5, 10, 11, 12]
+    bestMonths: [3, 4, 5, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "lachung-lachen",
@@ -4730,6 +5096,7 @@ export const destinations: Destination[] = [
     idealDays: 2.0,
     bestMonthsLabel: "Mar - May, Oct - Dec",
     bestMonths: [3, 4, 5, 10, 11, 12],
+    source: "directory",
     permitRequired: true
   },
   {
@@ -4743,7 +5110,8 @@ export const destinations: Destination[] = [
     rawTheme: "Scenic",
     idealDays: 2.0,
     bestMonthsLabel: "Mar - Jun, Sep - Dec",
-    bestMonths: [3, 4, 5, 6, 9, 10, 11, 12]
+    bestMonths: [3, 4, 5, 6, 9, 10, 11, 12],
+    source: "directory"
   },
   {
     slug: "yuksom",
@@ -4756,9 +5124,16 @@ export const destinations: Destination[] = [
     rawTheme: "Trek Base",
     idealDays: 2.0,
     bestMonthsLabel: "Mar - May, Oct - Dec",
-    bestMonths: [3, 4, 5, 10, 11, 12]
+    bestMonths: [3, 4, 5, 10, 11, 12],
+    source: "directory"
   }
 ];
+
+/**
+ * The catalogue the app uses: the directory, plus the places we added.
+ * `source` on each entry says which is which.
+ */
+export const destinations: Destination[] = [...directoryDestinations, ...addedDestinations];
 
 export function getDestination(slug: string): Destination | undefined {
   return destinations.find((d) => d.slug === slug);

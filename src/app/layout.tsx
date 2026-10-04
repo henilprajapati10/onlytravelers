@@ -9,6 +9,12 @@ import GlobalSearch from "@/components/GlobalSearch";
 import { TripsProvider } from "@/context/TripsContext";
 import { ProfileProvider } from "@/context/ProfileContext";
 import { siteUrl } from "@/lib/site";
+import { destinations } from "@/data/destinations";
+
+// Counted, never typed. A catalogue figure in prose goes stale the first time
+// the catalogue grows, and a wrong number in the description is the first
+// thing a reader can check.
+const COUNT = destinations.length;
 
 const display = Poppins({
   subsets: ["latin"],
@@ -28,7 +34,7 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "Plan and carry your India trips: 359 destinations across all 36 states, itineraries with real travel time, prep lists, bookings and spend — offline when you need it.",
+    `Plan and carry your India trips: ${COUNT} destinations across all 36 states, itineraries with real travel time, prep lists, bookings and spend — offline when you need it.`,
   applicationName: "OnlyTravelers",
   appleWebApp: {
     capable: true,
@@ -46,7 +52,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "OnlyTravelers — Before life gets too busy, travel.",
     description:
-      "Every state, every union territory, 359 destinations. Be travelers, not tourists.",
+      `Every state, every union territory, ${COUNT} destinations. Be travelers, not tourists.`,
     siteName: "OnlyTravelers",
     type: "website",
   },
