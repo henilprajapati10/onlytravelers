@@ -107,6 +107,16 @@ function moduleId(file) {
 
 const compiled = MODULES.map((file) => {
   const source = fs.readFileSync(path.join(root, file), "utf8");
+  // The demo runs these modules raw in a browser, where `process` is not
+  // defined. Next inlines process.env.* for the app; here it would throw at
+  // load and take the whole demo down. Fail the build instead.
+  const unguarded = [...source.matchAll(/process\.env/g)].filter((m) => {
+    const before = source.slice(Math.max(0, m.index - 40), m.index);
+    return !/typeof process/.test(before);
+  });
+  if (unguarded.length) {
+    throw new Error(`${file} reads process.env without a typeof guard; the demo cannot load it (see src/lib/basePath.ts for the pattern)`);
+  }
   const { code } = transform(source, {
     transforms: ["typescript", "imports"],
     filePath: file,
