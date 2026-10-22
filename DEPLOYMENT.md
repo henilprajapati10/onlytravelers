@@ -2,10 +2,13 @@
 
 ## Deploying
 
-**It is already deploying.** `.github/workflows/pages.yml` builds a static
-export on every push to the default branch and publishes it to GitHub
-Pages at **https://henilprajapati10.github.io/onlytravelers/** — the first
-run enables Pages on the repository itself; nothing to click. The CI
+**GitHub Pages, one switch away.** `.github/workflows/pages.yml` builds a
+static export on every push to the default branch and publishes it to
+GitHub Pages at **https://henilprajapati10.github.io/onlytravelers/**.
+GitHub does not let a workflow enable Pages on a repository, so once, as
+the owner: Settings → Pages → Build and deployment → Source: **GitHub
+Actions**. Then re-run the "Deploy to GitHub Pages" workflow from the
+Actions tab (or push anything). The CI
 workflow (`ci.yml`) runs lint, types, every test suite and a full build on
 every push, so a red commit never reaches the site.
 

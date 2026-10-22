@@ -11,6 +11,8 @@ of where you have been.
 
 The site deploys itself to GitHub Pages on every push:
 **https://henilprajapati10.github.io/onlytravelers/**
+(one-time: Settings → Pages → Source: GitHub Actions, then re-run the
+deploy workflow — a workflow cannot flip that switch itself).
 
 For a domain of your own, the fastest route is Vercel (Next.js's native host):
 

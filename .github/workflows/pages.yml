@@ -1,8 +1,12 @@
 # Deploys the site to GitHub Pages on every push to the default branch.
 #
 # This is the zero-account deploy: a static export of the whole site,
-# served at https://henilprajapati10.github.io/onlytravelers/. The first
-# run enables Pages on the repository; nothing else needs setting up.
+# served at https://henilprajapati10.github.io/onlytravelers/.
+#
+# One-time setup, by the repository owner (a workflow token is not allowed
+# to do it): Settings → Pages → "Build and deployment" → Source: GitHub
+# Actions. After that every push deploys, and this workflow can be re-run
+# from the Actions tab.
 #
 # For a domain of your own, set NEXT_PUBLIC_SITE_URL to it, drop
 # NEXT_PUBLIC_BASE_PATH, and add the domain under Settings → Pages
@@ -30,7 +34,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - name: Enable Pages on the repository
         id: pages
