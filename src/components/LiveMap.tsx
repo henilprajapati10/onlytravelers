@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import { stateRings } from "@/lib/geo";
 import { MAP_ATTRIBUTION } from "./IndiaMap";
 import { getState } from "@/data/states";
+import { withBase } from "@/lib/basePath";
 
 export interface LivePin {
   lat: number;
@@ -73,7 +74,7 @@ export default function LiveMap({ stateId, pins, center, zoom = 11, ariaLabel, o
         const safe = p.label.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
         marker.bindPopup(
           p.href
-            ? `<a href="${p.href}" style="font-weight:600;color:#0b1b30">${safe} →</a>`
+            ? `<a href="${withBase(p.href)}" style="font-weight:600;color:#0b1b30">${safe} →</a>`
             : `<span style="font-weight:600">${safe}</span>`
         );
         marker.bindTooltip(p.label, { direction: "top", offset: [0, -6] });

@@ -11,7 +11,10 @@ const SHELL_CACHE = `${VERSION}-shell`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
-const SHELL_URLS = ["/", "/trips", "/destinations", "/profile", "/offline"];
+// Served from <base>/sw.js, so the base is whatever precedes that — "" on a
+// domain of its own, "/onlytravelers" on a GitHub project site.
+const BASE = new URL(self.location.href).pathname.replace(/\/sw\.js$/, "");
+const SHELL_URLS = ["/", "/trips", "/destinations", "/profile", "/offline"].map((p) => BASE + p);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -56,7 +59,7 @@ self.addEventListener("fetch", (event) => {
         .catch(async () => {
           const cached = await caches.match(request);
           if (cached) return cached;
-          const shell = await caches.match("/offline");
+          const shell = await caches.match(BASE + "/offline");
           return (
             shell ??
             new Response("<h1>Offline</h1><p>This page has not been opened before.</p>", {
@@ -69,7 +72,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Build output is content-hashed, so a cache hit is always current.
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icon")) {
+  if (url.pathname.startsWith(BASE + "/_next/static/") || url.pathname.startsWith(BASE + "/icon")) {
     event.respondWith(
       caches.match(request).then(
         (cached) =>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { destinations } from "@/data/destinations";
+import TripFallback from "@/components/TripFallback";
 
 export default function NotFound() {
   const suggestions = ["taj-mahal-agra", "alleppey-backwaters", "hampi-unesco", "pangong-tso"]
@@ -7,6 +8,7 @@ export default function NotFound() {
     .filter((d): d is (typeof destinations)[number] => Boolean(d));
 
   return (
+    <TripFallback>
     <div className="mx-auto max-w-3xl px-4 py-24 text-center sm:px-6">
       <p className="font-display text-sm font-semibold uppercase tracking-widest text-coral-500">
         Off the map
@@ -47,5 +49,6 @@ export default function NotFound() {
         </Link>
       </div>
     </div>
+    </TripFallback>
   );
 }

@@ -1,5 +1,46 @@
 # Running OnlyTravelers at scale
 
+## Deploying
+
+**It is already deploying.** `.github/workflows/pages.yml` builds a static
+export on every push to the default branch and publishes it to GitHub
+Pages at **https://henilprajapati10.github.io/onlytravelers/** — the first
+run enables Pages on the repository itself; nothing to click. The CI
+workflow (`ci.yml`) runs lint, types, every test suite and a full build on
+every push, so a red commit never reaches the site.
+
+**For a domain of your own**, the better host is Vercel (Next.js's native
+runtime: cache headers, on-demand rendering, edge network), and it takes
+five minutes:
+
+1. https://vercel.com/new → import `henilprajapati10/onlytravelers`
+   (or use the button in `README.md`).
+2. Environment variable `NEXT_PUBLIC_SITE_URL` = your domain, e.g.
+   `https://onlytravelers.in`. Nothing else is required.
+3. Deploy. Then add the domain under the project's Domains tab and point
+   your DNS at it as instructed.
+4. Submit `https://<domain>/sitemap.xml` in Google Search Console.
+
+To keep GitHub Pages but on your own domain instead: add the domain under
+Settings → Pages, then in `pages.yml` set `NEXT_PUBLIC_SITE_URL` to it and
+remove `NEXT_PUBLIC_BASE_PATH`.
+
+### What the static export changes
+
+`STATIC_EXPORT=1` makes `next build` write plain files to `out/`:
+
+- `/trips/<id>` has no server to answer it, so the host serves `404.html`,
+  and the 404 page (`TripFallback`) reads the id off the URL and renders
+  the trip from the device's own storage. On Vercel the real route answers
+  and the fallback never runs.
+- The cache headers in `next.config.mjs` are dropped (a file host sets its
+  own); GitHub Pages caches `_next/static` adequately.
+- Social images are written without an extension; the workflow renames them
+  to `.png` and every page already links to the `.png` name.
+- `NEXT_PUBLIC_BASE_PATH` (e.g. `/onlytravelers`) is honoured everywhere a
+  URL is built by hand: the service worker, the manifest, map popups and
+  share links. On a domain of its own, leave it unset.
+
 The app is built so that the expensive work happens once, at build time, and
 the cheap work happens on the device. Almost nothing happens on a server per
 request. That is what lets it take a traffic spike — a festival weekend, a

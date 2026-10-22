@@ -213,7 +213,9 @@ export function StateOutline({
           fill="#f4f8fc"
         />
         {showContext &&
-          others.map((s) => (
+          // Only neighbours that reach into the frame: every page used to carry
+          // all 36 outlines, most of them off-screen.
+          others.filter((s) => reaches(s.bbox)).map((s) => (
               <path key={s.id} d={s.d} fill="#eef2f7" stroke="#dbe3ee" strokeWidth={unit * 0.4} />
             ))}
 

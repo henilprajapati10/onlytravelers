@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { withBase } from "@/lib/basePath";
 
 /**
  * Registers the service worker and shows the two states a travelling app
@@ -26,7 +27,7 @@ export default function AppRuntime() {
     let cancelled = false;
 
     navigator.serviceWorker
-      .register("/sw.js")
+      .register(withBase("/sw.js"))
       .then((registration) => {
         if (cancelled) return;
         registration.addEventListener("updatefound", () => {

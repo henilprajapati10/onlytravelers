@@ -50,14 +50,16 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 
 type ChecklistStore = Record<string, string[]>;
 
-export default function TripWorkspace() {
+export default function TripWorkspace({ tripId: tripIdProp }: { tripId?: string } = {}) {
   const params = useParams<{ id: string }>();
   const search = useSearchParams();
   const router = useRouter();
   const { trips, updateTrip, setActiveTrip, isHydrated } = useTrips();
   const { profile } = useProfile();
 
-  const tripId = params?.id ?? "";
+  // The id comes from the route — or from the static-host fallback, which
+  // reads it off the URL itself (see TripFallback).
+  const tripId = tripIdProp ?? params?.id ?? "";
   const trip = trips.find((t) => t.id === tripId) ?? null;
 
   /*

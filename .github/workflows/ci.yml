@@ -1,0 +1,51 @@
+# Every push: the checks a contributor runs locally, on a clean machine.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: node tests/superapp-logic.mjs
+      - run: node tests/trip-invariants.mjs
+      - run: npx next build
+      - name: Browser suites
+        run: |
+          npm i --no-save playwright@1.47.2
+          npx playwright install --with-deps chromium
+          (npx next start -p 3000 &) && for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/ && break; sleep 1; done
+          BASE_URL=http://localhost:3000 node tests/superapp.mjs
+          node scripts/build-demo.mjs && node tests/demo.mjs
+
+  static-export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Build the export the Pages workflow deploys
+        run: npx next build && touch out/.nojekyll && find out -type f -name opengraph-image -exec mv {} {}.png \;
+        env:
+          STATIC_EXPORT: "1"
+          NEXT_PUBLIC_BASE_PATH: /onlytravelers
+          NEXT_PUBLIC_SITE_URL: https://henilprajapati10.github.io/onlytravelers
+      - name: Smoke-test it served like GitHub Pages
+        run: |
+          npm i --no-save playwright@1.47.2
+          npx playwright install --with-deps chromium
+          (node scripts/serve-export.mjs out /onlytravelers 3300 &) && sleep 2
+          BASE_URL=http://localhost:3300/onlytravelers node tests/export.mjs

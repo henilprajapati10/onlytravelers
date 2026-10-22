@@ -12,7 +12,9 @@
     "build:demo": "node scripts/build-demo.mjs",
     "test:logic": "node tests/superapp-logic.mjs",
     "test:demo": "node tests/demo.mjs",
-    "test:super": "node tests/superapp.mjs"
+    "test:super": "node tests/superapp.mjs",
+    "build:export": "STATIC_EXPORT=1 next build",
+    "test:export": "node tests/export.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

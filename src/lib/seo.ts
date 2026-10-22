@@ -26,6 +26,17 @@ export function truncate(text: string, max: number): string {
   return (atWord > max * 0.6 ? cut.slice(0, atWord) : cut).replace(/[,;:\-–—]$/, "") + "…";
 }
 
+/**
+ * A static export writes each social image as an extension-less file, which
+ * a plain file host would serve with the wrong type; the deploy renames
+ * them to .png, and every reference here follows suit.
+ */
+export const OG_SUFFIX = process.env.STATIC_EXPORT === "1" ? ".png" : "";
+
+export function ogImagePath(path: string): string {
+  return /opengraph-image$/.test(path) ? `${path}${OG_SUFFIX}` : path;
+}
+
 export function absoluteUrl(path: string): string {
   return `${siteUrl}${path.startsWith("/") ? path : `/${path}`}`;
 }
@@ -48,7 +59,7 @@ export function pageMetadata(seo: PageSeo): Metadata {
   const title = truncate(seo.title, TITLE_MAX);
   const description = truncate(seo.description, DESCRIPTION_MAX);
   const url = absoluteUrl(seo.path);
-  const images = seo.image ? [{ url: absoluteUrl(seo.image), width: 1200, height: 630, alt: seo.imageAlt ?? title }] : undefined;
+  const images = seo.image ? [{ url: absoluteUrl(ogImagePath(seo.image)), width: 1200, height: 630, alt: seo.imageAlt ?? title }] : undefined;
   return {
     title,
     description,
@@ -132,7 +143,7 @@ export function destinationJsonLd(d: Destination, summary?: string): JsonLdObjec
     url: absoluteUrl(`/destinations/${d.slug}`),
     description: summary ? truncate(summary, 300) : `${d.name}, ${d.district}, ${d.stateName}.`,
     touristType: d.themes,
-    image: absoluteUrl(`/destinations/${d.slug}/opengraph-image`),
+    image: absoluteUrl(ogImagePath(`/destinations/${d.slug}/opengraph-image`)),
     containedInPlace: {
       "@type": "AdministrativeArea",
       name: state?.name ?? d.stateName,

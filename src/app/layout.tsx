@@ -9,6 +9,7 @@ import GlobalSearch from "@/components/GlobalSearch";
 import { TripsProvider } from "@/context/TripsContext";
 import { ProfileProvider } from "@/context/ProfileContext";
 import { siteUrl } from "@/lib/site";
+import { withBase } from "@/lib/basePath";
 import { destinations } from "@/data/destinations";
 import JsonLd from "@/components/JsonLd";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo";
@@ -45,11 +46,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: withBase("/icon.svg"), type: "image/svg+xml" },
+      { url: withBase("/icon-192.png"), sizes: "192x192", type: "image/png" },
     ],
-    shortcut: "/icon.svg",
-    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+    shortcut: withBase("/icon.svg"),
+    apple: [{ url: withBase("/apple-icon.png"), sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
     title: "OnlyTravelers — Before life gets too busy, travel.",

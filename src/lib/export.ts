@@ -1,9 +1,10 @@
+import { basePath } from "./basePath";
 import type { TripPlan } from "@/lib/trip";
 import { formatDays } from "@/lib/format";
 
 /** A trip is shareable as a link: the bag travels in the query string. */
 export function tripShareUrl(slugs: string[], origin?: string): string {
-  const base = origin ?? (typeof window !== "undefined" ? window.location.origin : "");
+  const base = origin ?? (typeof window !== "undefined" ? window.location.origin + basePath : "");
   return `${base}/trip?bag=${slugs.join(",")}`;
 }
 
