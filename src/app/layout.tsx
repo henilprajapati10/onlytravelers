@@ -10,6 +10,8 @@ import { TripsProvider } from "@/context/TripsContext";
 import { ProfileProvider } from "@/context/ProfileContext";
 import { siteUrl } from "@/lib/site";
 import { destinations } from "@/data/destinations";
+import JsonLd from "@/components/JsonLd";
+import { organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 
 // Counted, never typed. A catalogue figure in prose goes stale the first time
 // the catalogue grows, and a wrong number in the description is the first
@@ -55,7 +57,16 @@ export const metadata: Metadata = {
       `Every state, every union territory, ${COUNT} destinations. Be travelers, not tourists.`,
     siteName: "OnlyTravelers",
     type: "website",
+    locale: "en_IN",
+    url: siteUrl,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "OnlyTravelers — Before life gets too busy, travel.",
+    description: `Every state, every union territory, ${COUNT} destinations. Be travelers, not tourists.`,
+  },
+  alternates: { canonical: siteUrl },
+  robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
@@ -69,8 +80,9 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en-IN">
       <body className={`${display.variable} ${body.variable} font-body`}>
+        <JsonLd data={[websiteJsonLd(), organizationJsonLd()]} />
         <ProfileProvider>
           <TripsProvider>
             <Header />

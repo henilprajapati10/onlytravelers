@@ -6,6 +6,10 @@ import DestinationCard from "@/components/DestinationCard";
 import { getGuide } from "@/data/guides";
 import { StateOutline } from "@/components/IndiaMap";
 import LiveMapLoader from "@/components/LiveMapLoader";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import JsonLd from "@/components/JsonLd";
+import { pageMetadata, stateJsonLd } from "@/lib/seo";
+import { ZONE_SLUG } from "@/data/landing";
 import { coordFor } from "@/data/coords";
 import { googleRouteUrl, googleSearchUrl as googleMapsUrl } from "@/lib/maps";
 
@@ -16,10 +20,14 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: { params: { id: string } }) {
   const state = getState(params.id);
   if (!state) return {};
-  return {
-    title: `${state.name} — OnlyTravelers`,
-    description: state.positioning,
-  };
+  const count = destinationsInState(state.id).length;
+  return pageMetadata({
+    title: `${state.name}: ${count} places to visit, best time, how to reach`,
+    description: `${state.positioning} ${count} destinations with what each deserves, when to go and how to get there.`,
+    path: `/states/${state.id}`,
+    image: `/states/${state.id}/opengraph-image`,
+    imageAlt: `Map of ${state.name}`,
+  });
 }
 
 export default function StatePage({ params }: { params: { id: string } }) {
@@ -41,9 +49,14 @@ export default function StatePage({ params }: { params: { id: string } }) {
     <div>
       <div className="border-b border-navy-100 bg-white">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-          <Link href="/states" className="text-sm font-medium text-navy-400 hover:text-coral-500">
-            ← All states &amp; union territories
-          </Link>
+          <JsonLd data={stateJsonLd(state, list.length)} />
+          <Breadcrumbs
+            crumbs={[
+              { name: "States & UTs", path: "/states" },
+              { name: state.zone, path: `/zones/${ZONE_SLUG[state.zone]}` },
+              { name: state.name, path: `/states/${state.id}` },
+            ]}
+          />
           <div className="mt-3 grid gap-8 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <div className="flex flex-wrap items-center gap-2">

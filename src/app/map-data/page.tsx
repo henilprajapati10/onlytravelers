@@ -3,12 +3,14 @@ import { MAP_ATTRIBUTION } from "@/components/IndiaMap";
 import { stateShapes } from "@/data/shapes";
 import { coords, DATASET_GAPS } from "@/data/coords";
 import { destinations } from "@/data/destinations";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: "Where the maps come from — OnlyTravelers",
-  description:
-    "The boundary data, coordinates and licences behind every map in the app, and what we know is missing from them.",
-};
+  description: "The boundary data, coordinates and licences behind every map in the app, and what we know is missing from them.",
+  path: "/map-data",
+  image: "/opengraph-image",
+});
 
 export default function MapDataPage() {
   const placed = destinations.filter((d) => coords[d.slug]).length;

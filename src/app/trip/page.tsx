@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import TripPlanner from "@/components/TripPlanner";
 
 export const metadata = {
+  robots: { index: false, follow: false },
   title: "Your trip — OnlyTravelers",
   description:
     "Your Trip Bag, sequenced into a day-by-day itinerary with travel time, season fit, permits and export.",

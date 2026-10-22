@@ -1,5 +1,9 @@
 import Link from "next/link";
 import Logo from "./Logo";
+import { themes } from "@/data/destinations";
+import { zones } from "@/data/states";
+import { themeSlug, ZONE_SLUG } from "@/data/landing";
+import { monthFull } from "@/lib/trip";
 
 export default function Footer() {
   return (
@@ -61,6 +65,52 @@ export default function Footer() {
                 <Link href="/image-rights" className="hover:text-coral-400">
                   Image rights register
                 </Link>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Every landing page, one hop from every page: the site's own index. */}
+        <div className="mt-10 grid gap-8 border-t border-navy-700 pt-8 text-sm sm:grid-cols-3">
+          <div>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-navy-300">By month</h3>
+            <ul className="grid grid-cols-3 gap-x-2 gap-y-1.5">
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <li key={m}>
+                  <Link href={`/best-time/${monthFull(m).toLowerCase()}`} className="hover:text-coral-400">
+                    {monthFull(m)}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-navy-300">By theme</h3>
+            <ul className="grid grid-cols-2 gap-x-2 gap-y-1.5">
+              {themes.map((t) => (
+                <li key={t}>
+                  <Link href={`/themes/${themeSlug(t)}`} className="hover:text-coral-400">
+                    {t}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-navy-300">By region</h3>
+            <ul className="space-y-1.5">
+              {zones.map((z) => (
+                <li key={z}>
+                  <Link href={`/zones/${ZONE_SLUG[z]}`} className="hover:text-coral-400">
+                    {z}
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link href="/festivals" className="hover:text-coral-400">Festival calendar</Link>
+              </li>
+              <li>
+                <Link href="/map-data" className="hover:text-coral-400">Map data</Link>
               </li>
             </ul>
           </div>

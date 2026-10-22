@@ -12,8 +12,9 @@ viral reel — without anyone being paged.
 | Route | How it is served | Notes |
 | --- | --- | --- |
 | `/`, `/destinations`, `/states`, `/circuits`, `/festivals`, `/start`, `/trips`, `/profile`, `/campaign`, `/map-data`, `/image-rights`, `/offline` | Static HTML + JS | Built once per deploy |
-| `/destinations/[slug]` × 568 | Static HTML | `generateStaticParams` emits every place |
+| `/destinations/[slug]` × 568 | Static HTML | `generateStaticParams` emits every place, plus its social image |
 | `/states/[id]` × 36 | Static HTML | Same |
+| `/themes/[theme]` × 14, `/best-time/[month]` × 12, `/zones/[zone]` × 6 | Static HTML | Landing pages for whole searches |
 | `/trips/[id]` | Dynamic shell | The trip itself lives on the device; the server returns the same shell for every id |
 
 First Load JS after the bundle work in this branch: home 199 kB, destinations
@@ -83,6 +84,33 @@ npx next build
 BASE_URL=http://localhost:3000 PLAYWRIGHT_PATH=... node tests/superapp.mjs   # browser
 node scripts/build-demo.mjs && node tests/demo.mjs                           # the single-file demo
 ```
+
+## Search
+
+Everything a crawler needs is in the build, not bolted on:
+
+- **One canonical URL per page**, Open Graph and Twitter cards, and a title
+  under 60 / description under 160 characters — all produced by
+  `src/lib/seo.ts`, so no page drifts.
+- **Social preview images** for the home page, every state and every
+  destination (`opengraph-image.tsx`), generated at build time from the
+  same artwork the site uses — no third-party image, no rights question.
+- **Structured data** (`JsonLd`): `WebSite` + `SearchAction`, `Organization`,
+  `BreadcrumbList` on every deep page, `TouristDestination` for places and
+  states, `FAQPage` from the on-page quick answers, `ItemList` on landing
+  pages, `TouristTrip` for circuits. It says only what the page says —
+  never a price, rating or review.
+- **Landing pages that match whole searches**: `/themes/<theme>` (14),
+  `/best-time/<month>` (12) and `/zones/<zone>` (6), each with its own
+  written introduction, every place in it, and links to every state in it.
+  They are linked from the home page and the footer of every page.
+- **Internal linking**: breadcrumbs, "within 100 km" across state lines,
+  "pairs well with", "more in this state", and the footer index.
+- `sitemap.xml` lists every indexable page; `robots.txt` and `noindex`
+  keep trips, the bag, the profile and the offline shell out.
+
+Set `NEXT_PUBLIC_SITE_URL` to the real domain before the first deploy —
+canonical URLs, the sitemap and the social cards all use it.
 
 ## Rules the code enforces
 

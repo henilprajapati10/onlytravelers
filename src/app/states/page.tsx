@@ -3,12 +3,14 @@ import Link from "next/link";
 import { states, zones, zoneBlurbs } from "@/data/states";
 import { destinations } from "@/data/destinations";
 import { IndiaMap } from "@/components/IndiaMap";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: "India, state by state — OnlyTravelers",
-  description:
-    "All 28 states and 8 union territories, with capitals, airports, peak seasons and every destination we cover.",
-};
+  description: "All 28 states and 8 union territories, with capitals, airports, peak seasons and every destination we cover.",
+  path: "/states",
+  image: "/opengraph-image",
+});
 
 function StatesIndex() {
   return (

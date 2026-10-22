@@ -26,6 +26,11 @@
   const { summariseVisited } = OT.visited;
   const { budgetBurn } = OT.expenses;
   const { stateRings } = OT.geo;
+  const { destinationFaq } = OT.faq;
+  const { withinKm } = OT.distance;
+  const { THEME_INTRO, MONTH_INTRO, ZONE_INTRO, ZONE_SLUG, themeSlug } = OT.landing;
+  const { renownScore } = OT.renown;
+  const monthSlug = (m) => monthFull(m).toLowerCase();
   const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
   const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
   const MAP_ATTRIBUTION = "Boundaries: amCharts geodata (2023 divisions)";
@@ -459,7 +464,7 @@
       </div>
       <div class="mt-4 flex flex-wrap gap-2">
         <button type="button" id="my-india-download" class="rounded-lg border bd surface px-3 py-2 text-sm font-semibold txt">Download my map</button>
-        ${sum.count > 0 && nextZone ? `<a href="#/destinations?zone=${encodeURIComponent(nextZone)}" class="rounded-lg px-3 py-2 text-sm font-semibold accent" style="background:rgba(232,73,42,.09)">Nothing in the ${esc(nextZone)} yet → start there</a>` : ""}
+        ${sum.count > 0 && nextZone ? `<a href="#/zones/${ZONE_SLUG[nextZone]}" class="rounded-lg px-3 py-2 text-sm font-semibold accent" style="background:rgba(232,73,42,.09)">Nothing in the ${esc(nextZone)} yet → start there</a>` : ""}
         ${sum.count === 0 ? `<a href="#/start" class="rounded-lg px-3 py-2 text-sm font-semibold accent" style="background:rgba(232,73,42,.09)">Blank map. Plan the first trip →</a>` : ""}
       </div>
     </section>`;
@@ -472,6 +477,70 @@
     const inner = indiaMap(fills, false).replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1210" width="1000" height="1210">${inner}<text x="500" y="1170" text-anchor="middle" font-family="system-ui,sans-serif" font-size="34" font-weight="700" fill="#0b1b30">My India · ${sum.count} of ${sum.total} states &amp; UTs</text><text x="500" y="1196" text-anchor="middle" font-family="system-ui,sans-serif" font-size="16" fill="#7a8ba3">onlytravelers · ${MAP_ATTRIBUTION}</text></svg>`;
     downloadFile("my-india.svg", svg, "image/svg+xml");
+  }
+
+  /* ---------- quick answers, within reach, landing pages ---------- */
+  function quickAnswers(d, g) {
+    const faq = destinationFaq(d, g ? g.summary : undefined);
+    return `<section data-testid="quick-answers" class="rounded-2xl border bd surface p-5 shadow-card">
+      <h2 class="font-display text-lg font-semibold txt">Quick answers</h2>
+      <dl class="mt-3">${faq.map((f) => `<div class="border-t bd py-3"><dt class="font-semibold txt">${esc(f.question)}</dt><dd class="mt-1 text-sm txt-muted">${esc(f.answer)}</dd></div>`).join("")}</dl>
+    </section>`;
+  }
+
+  function withinReach(d) {
+    const near = withinKm(d, 100, 6);
+    if (!near.length) return "";
+    return `<section data-testid="within-reach" class="mt-16">
+      <h2 class="font-display text-2xl font-semibold txt">Within 100 km</h2>
+      <p class="mt-1 text-sm txt-muted">Straight-line distance from ${esc(d.name)}; by road, count on more.</p>
+      <ul class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">${near.map(({ destination: x, km }) => `<li><a href="#/destinations/${x.slug}" class="flex items-center gap-3 rounded-xl border bd surface p-3 shadow-card"><span class="text-xl" aria-hidden="true">${themeEmoji[x.themes[0]]}</span><span class="min-w-0 flex-1"><span class="block truncate font-semibold txt">${esc(x.name)}</span><span class="block text-xs txt-muted">${esc(x.stateName)}${x.hiddenGem ? " · ◆ Hidden gem" : ""}</span></span><span class="shrink-0 text-sm font-semibold tabular-nums txt-muted">${km} km</span></a></li>`).join("")}</ul>
+    </section>`;
+  }
+
+  function landingView(kind, key) {
+    let title = "", intro = "", eyebrow = "", list = [], crumb = "", extra = "";
+    const byRenown = (a, b) => renownScore(b.slug) - renownScore(a.slug) || a.name.localeCompare(b.name);
+    if (kind === "theme") {
+      const theme = themes.find((t) => themeSlug(t) === key);
+      if (!theme) return notFoundView();
+      title = THEME_INTRO[theme].title; intro = THEME_INTRO[theme].intro; eyebrow = `${themeEmoji[theme]} ${theme}`;
+      list = destinations.filter((d) => d.themes.includes(theme)).sort(byRenown);
+      crumb = `<a href="#/destinations">Destinations</a> <span class="txt-faint">/</span> <span class="font-medium txt" aria-current="page">${esc(theme)}</span>`;
+    } else if (kind === "month") {
+      const m = [1,2,3,4,5,6,7,8,9,10,11,12].find((x) => monthSlug(x) === key);
+      if (!m) return notFoundView();
+      title = `Where to go in India in ${monthFull(m)}`; intro = MONTH_INTRO[m]; eyebrow = "Best time to visit";
+      list = destinations.filter((d) => d.bestMonths.includes(m)).sort((a, b) => a.bestMonths.length - b.bestMonths.length || byRenown(a, b));
+      crumb = `<a href="#/festivals">Best time</a> <span class="txt-faint">/</span> <span class="font-medium txt" aria-current="page">${monthFull(m)}</span>`;
+      extra = `<nav aria-label="Other months" class="mt-6 flex flex-wrap gap-2">${[1,2,3,4,5,6,7,8,9,10,11,12].map((x) => `<a href="#/best-time/${monthSlug(x)}" class="rounded-full px-3 py-1 text-xs font-semibold ${x === m ? "text-white" : "border bd surface txt"}" ${x === m ? 'style="background:#0b1b30"' : ""}>${monthName(x)}</a>`).join("")}</nav>`;
+    } else {
+      const zone = zones.find((z) => ZONE_SLUG[z] === key);
+      if (!zone) return notFoundView();
+      title = `${zone}: places to visit`; intro = ZONE_INTRO[zone]; eyebrow = "Travel zone";
+      list = destinations.filter((d) => d.zone === zone).sort(byRenown);
+      crumb = `<a href="#/states">States &amp; UTs</a> <span class="txt-faint">/</span> <span class="font-medium txt" aria-current="page">${esc(zone)}</span>`;
+      const fills = {}; states.filter((st) => st.zone === zone).forEach((st) => { fills[st.id] = "#e8492a"; });
+      extra = `<div class="mt-6 w-full max-w-xs">${indiaMap(fills, false)}</div>`;
+    }
+    const stateIds = Array.from(new Set(list.map((d) => d.stateId)));
+    const stateList = states.filter((st) => stateIds.includes(st.id));
+    const gems = list.filter((d) => d.hiddenGem).length;
+    return `<div data-testid="landing" class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <nav aria-label="Breadcrumb" class="text-sm txt-muted"><a href="#/">Home</a> <span class="txt-faint">/</span> ${crumb}</nav>
+      <p class="mt-6 text-xs font-semibold uppercase tracking-wide accent">${esc(eyebrow)}</p>
+      <h1 class="font-display mt-1 text-3xl font-bold txt sm:text-4xl">${esc(title)}</h1>
+      <p class="mt-4 max-w-3xl text-lg txt-muted">${esc(intro)}</p>
+      <p class="mt-3 text-sm txt-muted">${list.length} destinations across ${stateList.length} ${stateList.length === 1 ? "state" : "states and union territories"}${gems ? ` · ${gems} hidden ${gems === 1 ? "gem" : "gems"}` : ""}</p>
+      ${extra}
+      ${stateList.length > 1 ? `<nav aria-label="States on this page" class="mt-6 flex flex-wrap gap-2">${stateList.map((st) => `<a href="#/states/${st.id}" class="rounded-full border bd surface px-3 py-1 text-xs font-semibold txt">${esc(st.name)} · ${list.filter((d) => d.stateId === st.id).length}</a>`).join("")}</nav>` : ""}
+      <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">${list.map(card).join("")}</div>
+      <p class="mt-10 text-sm txt-muted">Want this as a trip? <a href="#/start" class="font-semibold accent">Tell us how many days you have →</a></p>
+    </div>`;
+  }
+
+  function notFoundView() {
+    return `<div class="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6"><h1 class="font-display text-3xl font-bold txt">We haven't mapped that one</h1><a href="#/destinations" class="mt-6 inline-block rounded-lg bg-accent px-6 py-3 text-sm font-semibold">Explore destinations</a></div>`;
   }
 
   /* ---------- views ---------- */
@@ -545,7 +614,7 @@
           ${themes
             .map((t) => {
               const n = destinations.filter((d) => d.themes.includes(t)).length;
-              return `<a href="#/destinations?theme=${encodeURIComponent(t)}" class="flex flex-col items-center gap-1 rounded-xl border bd px-3 py-5 text-center transition hover:-translate-y-0.5" style="background:var(--bg)">
+              return `<a href="#/themes/${themeSlug(t)}" class="flex flex-col items-center gap-1 rounded-xl border bd px-3 py-5 text-center transition hover:-translate-y-0.5" style="background:var(--bg)">
                 <span class="text-2xl" aria-hidden="true">${themeEmoji[t]}</span>
                 <span class="text-xs font-semibold txt">${t}</span><span class="text-[11px] txt-faint">${n}</span></a>`;
             })
@@ -554,6 +623,13 @@
       </div>
     </section>
 
+    <section class="surface-alt py-10">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6">
+        <h2 class="font-display mb-1 text-2xl font-semibold txt">When are you free?</h2>
+        <p class="mb-5 text-sm txt-muted">Every month is the right month somewhere in India. Pick yours.</p>
+        <nav aria-label="Best time to visit, by month" class="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-12">${[1,2,3,4,5,6,7,8,9,10,11,12].map((m) => `<a href="#/best-time/${monthSlug(m)}" class="rounded-lg border bd surface px-2 py-2 text-center text-xs font-semibold txt">${monthFull(m).slice(0, 3)}<span class="block text-[10px] font-normal txt-faint">${destinations.filter((d) => d.bestMonths.includes(m)).length}</span></a>`).join("")}</nav>
+      </div>
+    </section>
     <section class="mx-auto max-w-6xl px-4 py-14 sm:px-6">
       <h2 class="font-display mb-2 text-2xl font-semibold txt">India, state by state</h2>
       <p class="mb-6 text-sm txt-muted">Six zones, 36 states and union territories. Every one of them is covered.</p>
@@ -562,7 +638,7 @@
           .map((z) => {
             const n = destinations.filter((d) => d.zone === z).length;
             const sc = states.filter((s) => s.zone === z).length;
-            return `<a href="#/states?zone=${encodeURIComponent(z)}" class="rounded-xl border bd surface p-5 shadow-card transition hover:-translate-y-0.5">
+            return `<a href="#/zones/${ZONE_SLUG[z]}" class="rounded-xl border bd surface p-5 shadow-card transition hover:-translate-y-0.5">
               <div class="flex items-baseline justify-between"><h3 class="font-display font-semibold txt">${z}</h3><span class="text-xs txt-faint">${n} places</span></div>
               <p class="mt-2 text-sm txt-muted">${esc(zoneBlurbs[z])}</p>
               <p class="mt-3 text-xs txt-faint">${countLabel(sc, "state")} &amp; UTs</p></a>`;
@@ -678,7 +754,7 @@
         <div class="absolute inset-0" style="background:linear-gradient(to top, rgba(8,19,36,.88), rgba(8,19,36,.25) 55%, transparent)"></div>
         <div class="absolute inset-x-0 bottom-0">
           <div class="mx-auto max-w-6xl px-4 pb-6 sm:px-6 sm:pb-8">
-            <a href="#/destinations" class="text-sm font-medium text-white/80">← All destinations</a>
+            <nav aria-label="Breadcrumb" class="text-sm text-white/80"><a href="#/">Home</a> <span class="text-white/50">/</span> <a href="#/destinations">Destinations</a> <span class="text-white/50">/</span> <a href="#/states/${st.id}">${esc(st.name)}</a> <span class="text-white/50">/</span> <span class="font-medium text-white" aria-current="page">${esc(d.name)}</span></nav>
             <h1 class="font-display mt-2 text-3xl font-bold text-white sm:text-5xl">${esc(d.name)}</h1>
           </div>
         </div>
@@ -709,6 +785,7 @@
             <h3 class="mt-10 font-display text-lg font-semibold txt">How a day here works</h3>
             <p class="mb-3 mt-1 text-sm txt-muted">Most of India rewards an early start and a real break in the middle. This is the rhythm this place in particular repays.</p>
             ${dayShapeCard(d, 0, true, false)}
+          <div class="mt-8">${quickAnswers(d, g)}</div>
 
             ${festivalsForSlug(d.slug).length ? `
               <h3 class="mt-10 font-display text-lg font-semibold txt">${festivalsForSlug(d.slug).length === 1 ? "The festival here" : "Festivals here"}</h3>
@@ -760,6 +837,8 @@
             </div>
           </aside>
         </div>
+
+        ${withinReach(d)}
 
         ${nearby.length ? `<div class="mt-16">
           <h2 class="font-display text-2xl font-semibold txt">More in ${esc(st.name)}</h2>
@@ -1861,6 +1940,9 @@
     if (parts[0] === "circuits") return { view: "circuits" };
     if (parts[0] === "profile") return { view: "profile" };
     if (parts[0] === "campaign") return { view: "campaign" };
+    if (parts[0] === "themes" && parts[1]) return { view: "theme", key: parts[1] };
+    if (parts[0] === "best-time" && parts[1]) return { view: "month", key: parts[1] };
+    if (parts[0] === "zones" && parts[1]) return { view: "zone", key: parts[1] };
     return { view: "home" };
   }
 
@@ -1892,6 +1974,9 @@
     else if (r.view === "workspace") html = workspaceView(r.id, r.tab);
     else if (r.view === "profile") html = profileView();
     else if (r.view === "campaign") html = campaignView();
+    else if (r.view === "theme") html = landingView("theme", r.key);
+    else if (r.view === "month") html = landingView("month", r.key);
+    else if (r.view === "zone") html = landingView("zone", r.key);
 
     document.getElementById("app").innerHTML = html;
     document.querySelectorAll(".nav-link").forEach((a) => {

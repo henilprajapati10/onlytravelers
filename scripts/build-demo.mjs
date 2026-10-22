@@ -62,6 +62,9 @@ const ENTRIES = [
   "src/lib/visited.ts",
   "src/lib/expenses.ts",
   "src/lib/geo.ts",
+  "src/lib/faq.ts",
+  "src/lib/distance.ts",
+  "src/data/landing.ts",
 ];
 
 /** Resolve an import the way the bundler would, relative to the repo root. */
@@ -182,6 +185,9 @@ ${registry}
     visited: __req("@/lib/visited"),
     expenses: __req("@/lib/expenses"),
     geo: __req("@/lib/geo"),
+    faq: __req("@/lib/faq"),
+    distance: __req("@/lib/distance"),
+    landing: __req("@/data/landing"),
   };
 })();
 `;

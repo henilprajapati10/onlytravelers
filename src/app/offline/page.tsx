@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export const metadata = { title: "Offline — OnlyTravelers" };
+export const metadata = { title: "Offline — OnlyTravelers", robots: { index: false, follow: false } };
 
 export default function OfflinePage() {
   return (

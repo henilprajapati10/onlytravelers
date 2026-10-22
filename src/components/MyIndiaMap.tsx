@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTrips } from "@/context/TripsContext";
 import { states } from "@/data/states";
+import { ZONE_SLUG } from "@/data/landing";
 import { loadManualVisited, saveManualVisited, summariseVisited } from "@/lib/visited";
 import { downloadFile } from "@/lib/export";
 import { IndiaMap, MAP_ATTRIBUTION } from "./IndiaMap";
@@ -110,7 +111,7 @@ export default function MyIndiaMap() {
         </button>
         {nextState && summary.count > 0 && (
           <Link
-            href={`/destinations?zone=${encodeURIComponent(nextUp!)}`}
+            href={`/zones/${ZONE_SLUG[nextUp as keyof typeof ZONE_SLUG]}`}
             className="rounded-lg bg-coral-50 px-3 py-2 text-sm font-semibold text-coral-700 hover:bg-coral-100"
           >
             Nothing in the {nextUp} yet → start there

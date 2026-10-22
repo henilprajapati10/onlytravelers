@@ -271,6 +271,20 @@ await page.locator("#budget-form button").click();
 await page.waitForTimeout(400);
 ok("setting a budget shows the burn", /of ₹10,000/.test(await page.locator("[data-testid=budget]").innerText()));
 
+/* ---------- landing pages, quick answers, within reach ---------- */
+await go("#/themes/beach");
+ok("a theme page renders in the demo", /Beaches in India/.test(await page.locator("h1").innerText()) && (await page.locator("article").count()) >= 20);
+await go("#/best-time/july");
+ok("a month page renders in the demo", /July/.test(await page.locator("h1").innerText()) && (await page.locator("nav[aria-label='Other months'] a").count()) === 12);
+await go("#/zones/northeast");
+ok("a zone page renders with its map", /Northeast India/.test(await page.locator("h1").innerText()) && (await page.locator("[data-testid=landing] svg path").count()) >= 36);
+await go("#/destinations/taj-mahal-agra");
+ok("quick answers in the demo", (await page.locator("[data-testid=quick-answers] dt").count()) >= 4);
+ok("within 100 km in the demo", (await page.locator("[data-testid=within-reach] li").count()) >= 2);
+ok("breadcrumbs in the demo", (await page.locator("nav[aria-label=Breadcrumb]").first().innerText()).includes("Uttar Pradesh"));
+await go("#/");
+ok("home links the month pages", (await page.locator("a[href^='#/best-time/']").count()) >= 12);
+
 /* ---------- phone shell ---------- */
 const m = await ctx.newPage();
 await m.setViewportSize({ width: 390, height: 844 });

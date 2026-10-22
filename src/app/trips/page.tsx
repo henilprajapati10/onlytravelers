@@ -1,6 +1,7 @@
 import TripsHub from "@/components/TripsHub";
 
 export const metadata = {
+  robots: { index: false, follow: false },
   title: "My trips — OnlyTravelers",
   description: "Every trip you are planning, booked, travelling or have finished.",
 };

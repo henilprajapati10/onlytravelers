@@ -6,6 +6,8 @@ import { getGuide } from "@/data/guides";
 import HomeHero from "@/components/HomeHero";
 import PlaceOfTheDay from "@/components/PlaceOfTheDay";
 import { themeEmoji } from "@/lib/format";
+import { themeSlug, ZONE_SLUG } from "@/data/landing";
+import { monthFull } from "@/lib/trip";
 
 /* Six quiet ones, fixed rather than random so the page is the same for
    everyone and cacheable. One theme each and spread across zones, so the
@@ -112,7 +114,7 @@ export default function HomePage() {
               return (
                 <Link
                   key={theme}
-                  href={`/destinations?theme=${encodeURIComponent(theme)}`}
+                  href={`/themes/${themeSlug(theme)}`}
                   className="flex flex-col items-center gap-1 rounded-xl border border-navy-100 bg-sand-50 px-3 py-5 text-center transition hover:border-coral-300 hover:bg-white"
                 >
                   <span className="text-2xl" aria-hidden="true">
@@ -124,6 +126,27 @@ export default function HomePage() {
               );
             })}
           </div>
+        </div>
+      </section>
+
+      <section className="bg-sand-50 py-10">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <h2 className="font-display mb-1 text-2xl font-semibold text-navy-800">When are you free?</h2>
+          <p className="mb-5 text-sm text-navy-500">Every month is the right month somewhere in India. Pick yours.</p>
+          <nav aria-label="Best time to visit, by month" className="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-12">
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+              <Link
+                key={m}
+                href={`/best-time/${monthFull(m).toLowerCase()}`}
+                className="rounded-lg border border-navy-100 bg-white px-2 py-2 text-center text-xs font-semibold text-navy-700 transition hover:border-coral-300"
+              >
+                {monthFull(m).slice(0, 3)}
+                <span className="block text-[10px] font-normal text-navy-400">
+                  {destinations.filter((d) => d.bestMonths.includes(m)).length}
+                </span>
+              </Link>
+            ))}
+          </nav>
         </div>
       </section>
 
@@ -142,7 +165,7 @@ export default function HomePage() {
             return (
               <Link
                 key={zone}
-                href={`/states?zone=${encodeURIComponent(zone)}`}
+                href={`/zones/${ZONE_SLUG[zone]}`}
                 className="rounded-xl border border-navy-100 bg-white p-5 shadow-card transition hover:-translate-y-0.5"
               >
                 <div className="flex items-baseline justify-between">

@@ -16,7 +16,7 @@ export default function DestinationsExplorer() {
   const initialZone = params.get("zone");
   const initialState = params.get("state");
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(params.get("q") ?? "");
   const [zone, setZone] = useState<Zone | "All">(
     initialZone && zones.includes(initialZone as Zone) ? (initialZone as Zone) : "All"
   );

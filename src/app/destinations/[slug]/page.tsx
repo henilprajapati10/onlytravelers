@@ -18,6 +18,11 @@ import NearbyLinks from "@/components/NearbyLinks";
 import WeatherCard from "@/components/WeatherCard";
 import Phrasebook from "@/components/Phrasebook";
 import { essentialsFor } from "@/data/essentials";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import QuickAnswers from "@/components/QuickAnswers";
+import WithinReach from "@/components/WithinReach";
+import JsonLd from "@/components/JsonLd";
+import { destinationJsonLd, pageMetadata } from "@/lib/seo";
 
 export function generateStaticParams() {
   return destinations.map((d) => ({ slug: d.slug }));
@@ -27,10 +32,14 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
   const d = getDestination(params.slug);
   if (!d) return {};
   const guide = getGuide(d.slug);
-  return {
-    title: `${d.name}, ${d.stateName} — OnlyTravelers`,
-    description: guide?.summary ?? `${d.name} in ${d.district}, ${d.stateName}.`,
-  };
+  return pageMetadata({
+    title: `${d.name}, ${d.stateName}: guide, best time, how long`,
+    description: guide?.summary ?? `${d.name} in ${d.district}, ${d.stateName}. ${d.bestMonthsLabel}.`,
+    path: `/destinations/${d.slug}`,
+    image: `/destinations/${d.slug}/opengraph-image`,
+    imageAlt: `${d.name}, ${d.stateName}`,
+    type: "article",
+  });
 }
 
 export default function DestinationPage({ params }: { params: { slug: string } }) {
@@ -51,15 +60,21 @@ export default function DestinationPage({ params }: { params: { slug: string } }
 
   return (
     <article>
+      <JsonLd data={destinationJsonLd(destination, guide?.summary)} />
       {/* Hero — 16:5 per the directory's destination page layout */}
       <div className="relative">
         <DestinationImage destination={destination} ratio="hero" priority />
         <div className="absolute inset-0 bg-gradient-to-t from-navy-900/85 via-navy-900/25 to-transparent" />
         <div className="absolute inset-x-0 bottom-0">
           <div className="mx-auto max-w-6xl px-4 pb-6 sm:px-6 sm:pb-8">
-            <Link href="/destinations" className="text-sm font-medium text-white/80 hover:text-white">
-              ← All destinations
-            </Link>
+            <Breadcrumbs
+              tone="light"
+              crumbs={[
+                { name: "Destinations", path: "/destinations" },
+                { name: state.name, path: `/states/${state.id}` },
+                { name: destination.name, path: `/destinations/${destination.slug}` },
+              ]}
+            />
             <h1 className="font-display mt-2 text-3xl font-bold text-white sm:text-5xl">
               {destination.name}
             </h1>
@@ -142,6 +157,10 @@ export default function DestinationPage({ params }: { params: { slug: string } }
             </p>
             {/* The tip already has its own box above; no need to print it twice. */}
             <DayShapeCard destination={destination} tip={guide?.tip} compact showAdvice={false} />
+
+            <div className="mt-8">
+              <QuickAnswers destination={destination} summary={guide?.summary} />
+            </div>
 
             {localFestivals.length > 0 && (
               <>
@@ -299,6 +318,10 @@ export default function DestinationPage({ params }: { params: { slug: string } }
               {essentials && <Phrasebook languages={essentials.languages} />}
             </div>
           </aside>
+        </div>
+
+        <div className="mt-16">
+          <WithinReach destination={destination} />
         </div>
 
         {pairs.length > 0 && (

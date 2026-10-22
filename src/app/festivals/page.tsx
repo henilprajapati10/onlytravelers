@@ -4,12 +4,14 @@ import { festivals, festivalsInMonth } from "@/data/festivals";
 import { getState } from "@/data/states";
 import { monthFull } from "@/lib/trip";
 import FestivalList from "@/components/FestivalList";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "India's festival calendar — OnlyTravelers",
-  description:
-    "What is actually happening, month by month, across all of India: festivals, melas and gatherings, with what each one does to a trip. Dates move with the lunar calendar, and we say so.",
-};
+  description: "What is actually happening, month by month, across all of India: festivals, melas and gatherings, with what each one does to a trip. Dates move with the lunar calendar, and we say so.",
+  path: "/festivals",
+  image: "/opengraph-image",
+});
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 

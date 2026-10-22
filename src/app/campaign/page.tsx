@@ -1,8 +1,12 @@
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: "Travelers, Not Tourists — OnlyTravelers",
-};
+  description: "Be travelers, not tourists. Every state, every union territory of India.",
+  path: "/campaign",
+  image: "/opengraph-image",
+});
 
 const principles = [
   {

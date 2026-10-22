@@ -535,6 +535,54 @@ await page.locator("button:has-text('Spend')").first().click();
 await page.waitForTimeout(400);
 ok("the budget is saved on the trip", (await page.locator("input[aria-label='Budget in rupees']").inputValue()) === "10000");
 
+/* ---------- SEO: what a crawler sees ---------- */
+{
+  const html = await (await page.request.get(B + "/destinations/taj-mahal-agra")).text();
+  const canon = html.match(/<link rel="canonical" href="([^"]+)"/);
+  ok("a destination page has one canonical URL", canon && canon[1].endsWith("/destinations/taj-mahal-agra") && (html.match(/rel="canonical"/g) || []).length === 1, canon?.[1]);
+  ok("…Open Graph and Twitter cards with an image", /property="og:title"/.test(html) && /property="og:image" content="[^"]*\/destinations\/taj-mahal-agra\/opengraph-image/.test(html) && /name="twitter:card" content="summary_large_image"/.test(html));
+  const title = html.match(/<title>([^<]+)<\/title>/)?.[1] ?? "";
+  const desc = html.match(/<meta name="description" content="([^"]+)"/)?.[1] ?? "";
+  ok("…a title under 60 and a description under 160 characters", title.length > 0 && title.length <= 60 && desc.length >= 40 && desc.length <= 160, `${title.length} / ${desc.length}`);
+  const lds = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
+  const types = lds.map((o) => o["@type"]);
+  ok("…structured data: WebSite, Organization, BreadcrumbList, TouristDestination, FAQPage", ["WebSite", "Organization", "BreadcrumbList", "TouristDestination", "FAQPage"].every((t) => types.includes(t)), types.join(", "));
+  ok("…and none of it claims a price or rating", !/price|aggregateRating|offers/i.test(JSON.stringify(lds)));
+  ok("…one h1", (html.match(/<h1[\s>]/g) || []).length === 1);
+  ok("…the page is served with lang en-IN", /<html lang="en-IN"/.test(html));
+
+  const og = await page.request.get(B + "/destinations/taj-mahal-agra/opengraph-image");
+  ok("the destination's social image is a real PNG", og.ok() && /image\/png/.test(og.headers()["content-type"] ?? "") && (await og.body()).length > 20000, `${og.status()} ${og.headers()["content-type"]}`);
+  const ogs = await page.request.get(B + "/states/kerala/opengraph-image");
+  ok("and so is the state's", ogs.ok() && /image\/png/.test(ogs.headers()["content-type"] ?? ""));
+
+  const prof = await (await page.request.get(B + "/profile")).text();
+  ok("private pages are noindex", /<meta name="robots" content="noindex/.test(prof));
+  const robots = await (await page.request.get(B + "/robots.txt")).text();
+  ok("robots.txt disallows the private pages and names the sitemap", /Disallow: \/trips/.test(robots) && /Sitemap: /.test(robots));
+  const sm = await (await page.request.get(B + "/sitemap.xml")).text();
+  ok("the sitemap carries the landing pages", /\/themes\/beach</.test(sm) && /\/best-time\/july</.test(sm) && /\/zones\/northeast</.test(sm) && (sm.match(/<url>/g) || []).length > 600);
+}
+
+/* ---------- landing pages and the new destination sections ---------- */
+await page.goto(B + "/themes/beach", { waitUntil: "networkidle" });
+ok("a theme page renders with intro and cards", /Beaches in India/.test(await page.locator("h1").innerText()) && (await page.locator("article").count()) >= 20);
+ok("…breadcrumbs", (await page.locator("nav[aria-label=Breadcrumb] a").count()) >= 2);
+await page.goto(B + "/best-time/july", { waitUntil: "networkidle" });
+ok("a month page renders what is in season", /July/.test(await page.locator("h1").innerText()) && (await page.locator("article").count()) >= 20);
+ok("…with the other months one tap away", (await page.locator("nav[aria-label='Other months'] a").count()) === 12);
+await page.goto(B + "/zones/northeast", { waitUntil: "networkidle" });
+ok("a zone page renders with its map", /Northeast India/.test(await page.locator("h1").innerText()) && (await page.locator("figure svg path").count()) >= 36);
+await page.goto(B + "/destinations/taj-mahal-agra", { waitUntil: "networkidle" });
+ok("quick answers are on the page", (await page.locator("[data-testid=quick-answers] dt").count()) >= 4);
+ok("within 100 km lists neighbours with distances", (await page.locator("[data-testid=within-reach] li").count()) >= 2 && /\d+ km/.test(await page.locator("[data-testid=within-reach]").innerText()));
+ok("the hero carries a breadcrumb trail", (await page.locator("nav[aria-label=Breadcrumb]").first().innerText()).includes("Uttar Pradesh"));
+await page.goto(B + "/", { waitUntil: "networkidle" });
+ok("home links every month and every theme page", (await page.locator("a[href^='/best-time/']").count()) >= 12 && (await page.locator("a[href^='/themes/']").count()) >= 14);
+await page.goto(B + "/destinations?q=hampi", { waitUntil: "networkidle" });
+await page.waitForTimeout(400);
+ok("the search action URL pre-fills the explorer", (await page.locator("article").first().innerText()).includes("Hampi"));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 console.log("errors:", errs.length ? errs.join("\n") : "none");
 await browser.close();

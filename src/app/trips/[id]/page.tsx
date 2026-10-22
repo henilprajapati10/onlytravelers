@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import TripWorkspace from "@/components/TripWorkspace";
 
 export const metadata = {
+  robots: { index: false, follow: false },
   title: "Trip — OnlyTravelers",
 };
 

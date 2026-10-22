@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { imageRightsRegister } from "@/data/images";
 import { destinations } from "@/data/destinations";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: "Image rights register — OnlyTravelers",
-  description:
-    "One row per photograph: destination, source, licence, photographer, date acquired and where it is used.",
-};
+  description: "One row per photograph: destination, source, licence, photographer, date acquired and where it is used.",
+  path: "/image-rights",
+  image: "/opengraph-image",
+});
 
 export default function ImageRightsPage() {
   const rows = imageRightsRegister();

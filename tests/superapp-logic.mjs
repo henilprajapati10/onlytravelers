@@ -551,6 +551,70 @@ ok("no destination guide quotes a price", priced === 0, `${priced} found`);
   ok("every pin in a contiguous state falls within its unprojected bounds", outside === 0, `${outside} outside`);
 }
 
+/* ---------- SEO: what crawlers read ---------- */
+{
+  const Seo = loadModule("src/lib/seo.ts");
+  const G = loadModule("src/data/guides/index.ts");
+  const L = loadModule("src/data/landing.ts");
+  const F = loadModule("src/lib/faq.ts");
+  const Dist = loadModule("src/lib/distance.ts");
+  const Sm = loadModule("src/app/sitemap.ts");
+
+  ok("truncate keeps short text whole", Seo.truncate("Hampi", 60) === "Hampi");
+  const long = Seo.truncate("A".repeat(20) + " " + "B".repeat(200), 60);
+  ok("truncate cuts at a word and ends in an ellipsis", long.length <= 60 && long.endsWith("…"), long);
+
+  // Every indexable page's title and description fit the limits.
+  let badTitle = 0, badDesc = 0, sample = "";
+  for (const d of D.destinations) {
+    const m = Seo.pageMetadata({ title: `${d.name}, ${d.stateName}: guide, best time, how long`, description: G.guides[d.slug]?.summary ?? "", path: `/destinations/${d.slug}` });
+    if (m.title.length > Seo.TITLE_MAX) { badTitle++; sample = m.title; }
+    if (m.description.length > Seo.DESCRIPTION_MAX || m.description.length < 40) badDesc++;
+  }
+  ok("every destination title is within 60 characters", badTitle === 0, `${badTitle} long, e.g. ${sample}`);
+  ok("every destination description is 40–158 characters", badDesc === 0, `${badDesc} bad`);
+  const m = Seo.pageMetadata({ title: "Kerala", description: "x".repeat(50), path: "/states/kerala", image: "/states/kerala/opengraph-image" });
+  ok("metadata carries canonical, Open Graph and Twitter", m.alternates.canonical.endsWith("/states/kerala") && m.openGraph.url === m.alternates.canonical && m.twitter.card === "summary_large_image" && m.openGraph.images[0].url.endsWith("/states/kerala/opengraph-image"));
+  ok("noindex pages say so", Seo.pageMetadata({ title: "t", description: "d", path: "/trips", noindex: true }).robots.index === false);
+
+  const taj = D.destinations.find((d) => d.slug === "taj-mahal-agra");
+  const ld = Seo.destinationJsonLd(taj, G.guides[taj.slug].summary);
+  ok("a destination is a TouristDestination with geo and region", ld["@type"] === "TouristDestination" && ld.geo.latitude > 27 && ld.address.addressRegion === "Uttar Pradesh" && ld.containedInPlace.url.endsWith("/states/uttar-pradesh"));
+  const flat = JSON.stringify([ld, Seo.websiteJsonLd(), Seo.organizationJsonLd(), Seo.breadcrumbJsonLd([{ name: "Home", path: "/" }])]);
+  ok("structured data never claims a price, rating or review", !/price|offers|aggregateRating|review/i.test(flat));
+  ok("the breadcrumb list is positioned from 1", Seo.breadcrumbJsonLd([{ name: "Home", path: "/" }, { name: "X", path: "/x" }]).itemListElement[1].position === 2);
+
+  // Quick answers
+  const faq = F.destinationFaq(taj, G.guides[taj.slug].summary);
+  ok("quick answers cover where, how long and when", faq.length >= 4 && /Where is/.test(faq[0].question) && /How many days/.test(faq[1].question) && /best time/.test(faq[2].question));
+  let faqPrices = 0;
+  for (const d of D.destinations) for (const f of F.destinationFaq(d, G.guides[d.slug]?.summary)) if (costLike.test(f.answer)) faqPrices++;
+  ok("no quick answer quotes a price", faqPrices === 0, `${faqPrices}`);
+  const lak = D.destinations.find((d) => d.stateId === "lakshadweep");
+  ok("permit and ferry questions appear where they apply", F.destinationFaq(lak).some((f) => /permit/i.test(f.question)) && F.destinationFaq(lak).some((f) => /reach/i.test(f.question)));
+
+  // Distance
+  const agraFort = D.destinations.find((d) => d.slug === "agra-fort") || D.destinations.find((d) => d.stateId === "uttar-pradesh" && d.district === taj.district && d.slug !== taj.slug);
+  ok("haversine is sane", Math.round(Dist.haversineKm({ lat: 28.61, lng: 77.21 }, { lat: 27.17, lng: 78.04 })) > 170 && Math.round(Dist.haversineKm({ lat: 28.61, lng: 77.21 }, { lat: 27.17, lng: 78.04 })) < 190);
+  const near = Dist.withinKm(taj, 100, 6);
+  ok("within 100 km finds the Agra neighbours nearest first", near.length >= 2 && near.every((n) => n.km <= 100) && near[0].km <= near[near.length - 1].km && (!agraFort || near.some((n) => n.destination.slug === agraFort.slug)));
+  ok("within reach crosses state lines", D.destinations.some((d) => Dist.withinKm(d, 100, 6).some((n) => n.destination.stateId !== d.stateId)));
+
+  // Landing copy and routes
+  ok("every theme has a landing title and intro", D.themes.every((t) => L.THEME_INTRO[t]?.title && L.THEME_INTRO[t].intro.length > 80));
+  ok("every month has an intro", Array.from({ length: 12 }, (_, i) => i + 1).every((m) => L.MONTH_INTRO[m]?.length > 80));
+  ok("every zone has an intro and a slug", S.zones.every((z) => L.ZONE_INTRO[z]?.length > 60 && L.ZONE_SLUG[z]));
+  ok("theme slugs are URL-safe and unique", new Set(D.themes.map(L.themeSlug)).size === D.themes.length && D.themes.every((t) => /^[a-z0-9-]+$/.test(L.themeSlug(t))));
+  ok("landing copy quotes no price", !costLike.test(JSON.stringify([L.THEME_INTRO, L.MONTH_INTRO, L.ZONE_INTRO])));
+
+  // Sitemap
+  const urls = Sm.default().map((u) => u.url);
+  ok("sitemap lists every destination and state", D.destinations.every((d) => urls.some((u) => u.endsWith(`/destinations/${d.slug}`))) && S.states.every((s) => urls.some((u) => u.endsWith(`/states/${s.id}`))));
+  ok("sitemap lists the landing pages", urls.some((u) => u.endsWith("/themes/beach")) && urls.some((u) => u.endsWith("/best-time/july")) && urls.some((u) => u.endsWith("/zones/northeast")));
+  ok("sitemap keeps private pages out", !urls.some((u) => /\/(trips|trip|cart|profile|offline)(\/|$)/.test(u)));
+  ok("sitemap URLs are unique", new Set(urls).size === urls.length);
+}
+
 /* ---------- the expanded catalogue ---------- */
 {
   const all = D.destinations;
