@@ -34,6 +34,21 @@ const go = async (hash) => {
 };
 
 await go("#/");
+// If the shell never renders, say why before anything else times out.
+const booted = await page.waitForSelector("h1", { timeout: 15000 }).catch(() => null);
+if (!booted) {
+  const state = await page.evaluate(() => ({
+    readyState: document.readyState,
+    L: typeof window.L,
+    OT: typeof window.OT,
+    app: (document.getElementById("app")?.innerHTML ?? "").slice(0, 300),
+    hash: location.hash,
+  }));
+  console.log("DEMO DID NOT BOOT:", JSON.stringify(state));
+  console.log("errors:", errs.join("\n") || "none");
+  await browser.close();
+  process.exit(1);
+}
 ok("demo boots", (await page.locator("h1").first().innerText()).length > 0);
 ok("hero carries the tagline", (await page.locator("text=Before life gets too busy, travel.").count()) > 0);
 ok("hero leads with the starter", (await page.locator("a:has-text('Plan my trip in 30 seconds')").count()) > 0);
