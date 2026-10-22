@@ -14366,11 +14366,17 @@ const MAPS = "https://www.google.com/maps";
   const EXT = 'target="_blank" rel="noopener noreferrer"';
 
   /** An embedded map that says so when there is no signal, instead of a grey box. */
+  // The published preview runs in a viewer that never loads another site's
+  // frame, so there the map is a link out rather than an embed.
+  const IN_VIEWER = Boolean(window.claude && window.claude.use);
   function gmap(src, title, openUrl, cls, fallback) {
-    if (!navigator.onLine) {
-      return `<div class="flex w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-lg surface-alt p-4 text-center ${cls}">
-        ${fallback || ""}
-        <p class="text-xs txt-muted">No signal, so no live map. The Google Maps app still works if you saved this area offline.</p>
+    if (!navigator.onLine || IN_VIEWER) {
+      const why = IN_VIEWER
+        ? "The live map opens in Google Maps from this preview."
+        : "No signal, so no live map. The Google Maps app still works if you saved this area offline.";
+      return `<div data-map-panel class="flex w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-lg surface-alt p-4 text-center ${cls}">
+        ${fallback || `<span class="text-3xl" aria-hidden="true">🗺️</span><p class="text-sm font-semibold txt">${esc(title)}</p>`}
+        <p class="text-xs txt-muted">${why}</p>
         <a ${EXT} href="${esc(openUrl)}" class="rounded-lg border bd surface px-3 py-1.5 text-xs font-semibold txt">Open in Google Maps</a>
       </div>`;
     }

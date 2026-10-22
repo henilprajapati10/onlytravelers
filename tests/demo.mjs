@@ -276,6 +276,15 @@ ok("no page quotes a price", priced.length === 0, priced.join(", "));
   ok("offline, the map says there is no signal instead of a grey box",
      (await q("iframe[data-google-map]").count()) === 0 && (await q("text=No signal, so no live map").count()) > 0);
   await ctx.setOffline(false);
+
+  // The published preview blocks frames: the map becomes a link out, and nothing breaks.
+  const viewer = await ctx.newPage();
+  await viewer.addInitScript(() => { window.claude = { use: () => Promise.resolve(null) }; });
+  await viewer.goto(file + "#/destinations/hampi-unesco", { waitUntil: "load" });
+  await viewer.waitForTimeout(500);
+  ok("in the preview viewer, the map is a link out instead of a blocked frame",
+     (await viewer.locator("iframe[data-google-map]").count()) === 0 && (await viewer.locator("[data-map-panel] a[href*='google.com/maps']").count()) >= 1);
+  await viewer.close();
 }
 
 /* ---------- phone shell ---------- */
