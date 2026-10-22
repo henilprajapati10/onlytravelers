@@ -5,9 +5,16 @@
  * (the service worker, the manifest, raw HTML in a map popup) goes
  * through here.
  */
-// Guarded: the demo runs this module raw in a browser, where `process`
-// does not exist; Next inlines the value at build time for the app.
-const env = typeof process !== "undefined" ? process.env : ({} as Record<string, string | undefined>);
-export const basePath = (env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
+// Next inlines `process.env.NEXT_PUBLIC_BASE_PATH` at build time — but only
+// that exact expression, so it must stay written out. The demo runs this
+// module raw in a browser with no `process`, hence the try.
+function readBasePath(): string | undefined {
+  try {
+    return process.env.NEXT_PUBLIC_BASE_PATH;
+  } catch {
+    return undefined;
+  }
+}
+export const basePath = (readBasePath() ?? "").replace(/\/$/, "");
 
 export const withBase = (path: string): string => `${basePath}${path.startsWith("/") ? path : `/${path}`}`;

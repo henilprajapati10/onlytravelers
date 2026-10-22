@@ -13,6 +13,14 @@ const file = "file://" + path.resolve(process.cwd(), "demo/index.html");
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 950 } });
 const page = await ctx.newPage();
+// DEMO_LEAFLET_LOCAL=1 serves Leaflet from node_modules in place of the CDN,
+// so the live-map path can be exercised where the CDN is unreachable.
+if (process.env.DEMO_LEAFLET_LOCAL) {
+  const fs = await import("node:fs");
+  await page.route("**/leaflet.min.js", (r) =>
+    r.fulfill({ body: fs.readFileSync("node_modules/leaflet/dist/leaflet.js", "utf8"), contentType: "text/javascript" })
+  );
+}
 
 const errs = [];
 page.on("pageerror", (e) => errs.push("PAGEERROR: " + e.message));
@@ -234,11 +242,21 @@ ok("no page quotes a price", priced.length === 0, priced.join(", "));
 
 /* ---------- real outlines, Google Maps, nearby, weather, phrasebook ---------- */
 await go("#/destinations/taj-mahal-agra");
-const mapSvg = page.locator("svg[aria-label='Map of Uttar Pradesh']");
-ok("the detail page draws the real state outline", (await mapSvg.count()) === 1);
-const vb = (await mapSvg.getAttribute("viewBox")) || "";
-ok("with a sane viewBox", !/NaN/.test(vb) && vb.split(" ").length === 4, vb);
-ok("and a pin on the place", (await mapSvg.locator("circle").count()) >= 2);
+// With Leaflet (a CDN the sandbox may block, CI does not) the live map
+// replaces the drawn outline; without it the outline is the map.
+const leafletHere = await page.evaluate(() => Boolean(window.L));
+if (leafletHere) {
+  await page.waitForTimeout(800);
+  ok("the detail page mounts the accurate map on the place", (await page.locator("[data-livemap][data-live='1'] .leaflet-interactive").count()) >= 2);
+  ok("with the state named on it", (await page.locator("[data-livemap] [aria-label='Map of Uttar Pradesh']").count()) === 1);
+  ok("and the outline stood aside", (await page.locator("svg[aria-label='Map of Uttar Pradesh']").count()) === 0);
+} else {
+  const mapSvg = page.locator("svg[aria-label='Map of Uttar Pradesh']");
+  ok("the detail page draws the real state outline", (await mapSvg.count()) === 1);
+  const vb = (await mapSvg.getAttribute("viewBox")) || "";
+  ok("with a sane viewBox", !/NaN/.test(vb) && vb.split(" ").length === 4, vb);
+  ok("and a pin on the place", (await mapSvg.locator("circle").count()) >= 2);
+}
 ok("Google Maps and directions links", (await page.locator("a[href*='google.com/maps/search']").count()) >= 1 && (await page.locator("a[href*='google.com/maps/dir']").count()) >= 1);
 ok("eight nearby links centred on the place", (await page.locator("[data-testid=nearby] a").count()) === 8 &&
    /@27\.1\d+,78\.0\d+,15z/.test(await page.locator("[data-testid=nearby] a").first().getAttribute("href")));

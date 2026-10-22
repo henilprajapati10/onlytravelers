@@ -110,12 +110,15 @@ const compiled = MODULES.map((file) => {
   // The demo runs these modules raw in a browser, where `process` is not
   // defined. Next inlines process.env.* for the app; here it would throw at
   // load and take the whole demo down. Fail the build instead.
-  const unguarded = [...source.matchAll(/process\.env/g)].filter((m) => {
-    const before = source.slice(Math.max(0, m.index - 40), m.index);
-    return !/typeof process/.test(before);
+  // Next inlines only the exact `process.env.X` expression, so the guard
+  // has to be a try/catch around it, not a typeof branch on a variable.
+  const scanned = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const unguarded = [...scanned.matchAll(/process\.env/g)].filter((m) => {
+    const before = scanned.slice(Math.max(0, m.index - 60), m.index);
+    return !/try\s*\{/.test(before);
   });
   if (unguarded.length) {
-    throw new Error(`${file} reads process.env without a typeof guard; the demo cannot load it (see src/lib/basePath.ts for the pattern)`);
+    throw new Error(`${file} reads process.env outside a try; the demo cannot load it (see src/lib/basePath.ts for the pattern)`);
   }
   const { code } = transform(source, {
     transforms: ["typescript", "imports"],

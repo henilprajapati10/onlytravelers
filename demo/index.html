@@ -11914,8 +11914,14 @@ const MAPS_BASE = "https://www.google.com/maps";
 } exports.googleEmbedUrl = googleEmbedUrl;
 
  function mapsApiKey() {
-  // Guarded: the demo loads this module raw in a browser.
-  const key = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY : undefined;
+  // The exact expression stays so Next can inline it; the try is for the
+  // demo, which loads this module raw in a browser with no `process`.
+  let key;
+  try {
+    key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  } catch (e) {
+    key = undefined;
+  }
   return key && key.trim() ? key.trim() : undefined;
 } exports.mapsApiKey = mapsApiKey;
 
@@ -16683,10 +16689,17 @@ __def("@/lib/basePath", function(exports, module){
  * (the service worker, the manifest, raw HTML in a map popup) goes
  * through here.
  */
-// Guarded: the demo runs this module raw in a browser, where `process`
-// does not exist; Next inlines the value at build time for the app.
-const env = typeof process !== "undefined" ? process.env : ({} );
- const basePath = (_nullishCoalesce(env.NEXT_PUBLIC_BASE_PATH, () => ( ""))).replace(/\/$/, ""); exports.basePath = basePath;
+// Next inlines `process.env.NEXT_PUBLIC_BASE_PATH` at build time — but only
+// that exact expression, so it must stay written out. The demo runs this
+// module raw in a browser with no `process`, hence the try.
+function readBasePath() {
+  try {
+    return process.env.NEXT_PUBLIC_BASE_PATH;
+  } catch (e) {
+    return undefined;
+  }
+}
+ const basePath = (_nullishCoalesce(readBasePath(), () => ( ""))).replace(/\/$/, ""); exports.basePath = basePath;
 
  const withBase = (path) => `${exports.basePath}${path.startsWith("/") ? path : `/${path}`}`; exports.withBase = withBase;
 

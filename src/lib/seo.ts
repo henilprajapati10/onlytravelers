@@ -31,7 +31,14 @@ export function truncate(text: string, max: number): string {
  * a plain file host would serve with the wrong type; the deploy renames
  * them to .png, and every reference here follows suit.
  */
-export const OG_SUFFIX = typeof process !== "undefined" && process.env.STATIC_EXPORT === "1" ? ".png" : "";
+function staticExport(): boolean {
+  try {
+    return process.env.STATIC_EXPORT === "1";
+  } catch {
+    return false;
+  }
+}
+export const OG_SUFFIX = staticExport() ? ".png" : "";
 
 export function ogImagePath(path: string): string {
   return /opengraph-image$/.test(path) ? `${path}${OG_SUFFIX}` : path;

@@ -125,7 +125,13 @@ export function googleEmbedUrl(destination: Destination, apiKey: string): string
 }
 
 export function mapsApiKey(): string | undefined {
-  // Guarded: the demo loads this module raw in a browser.
-  const key = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY : undefined;
+  // The exact expression stays so Next can inline it; the try is for the
+  // demo, which loads this module raw in a browser with no `process`.
+  let key: string | undefined;
+  try {
+    key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  } catch {
+    key = undefined;
+  }
   return key && key.trim() ? key.trim() : undefined;
 }
